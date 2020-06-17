@@ -143,6 +143,7 @@ public class BuildApplication {
 
     // build application
     build(parameters, targets, pvName, pvcName, namespace);
+    fail("Failing test ");
   }
 
   /**
