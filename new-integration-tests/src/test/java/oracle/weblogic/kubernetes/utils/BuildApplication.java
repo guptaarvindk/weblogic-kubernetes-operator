@@ -103,6 +103,8 @@ public class BuildApplication {
     Path targetPath = Paths.get(PV_ROOT, "applications", application.getFileName().toString());
     logger.info("Copy the application {0} to PV hostpath {1}", application, targetPath);
     assertDoesNotThrow(() -> {
+      logger.info("{{{{{{{{{{{Walk top level directory}}}}}}}}}}}");
+      FileWalker.walk(Paths.get(PV_ROOT, "applications").toString());
       logger.info("{{{{{{{{{{{Walk directory before recreating directory}}}}}}}}}}}");
       FileWalker.walk(targetPath.toString());
       Files.createDirectories(targetPath);
