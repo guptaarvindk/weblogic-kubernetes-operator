@@ -76,7 +76,7 @@ public class BuildApplication {
 
   private static String image;
   private static boolean isUseSecret;
-  private static final String APPLICATIONS_MOUNT_PATH = "/application";
+  private static final String APPLICATIONS_MOUNT_PATH = "/j2eeapplication";
   private static final String BUILD_SCRIPT = "build_application.sh";
   private static final Path BUILD_SCRIPT_SOURCE_PATH = Paths.get(RESOURCE_DIR, "bash-scripts", BUILD_SCRIPT);
 
@@ -100,20 +100,21 @@ public class BuildApplication {
 
     // Copy the application source directory to PV_ROOT/applications/<application_directory_name>
     // This location is mounted in the build pod under /application
-    Path targetPath = Paths.get(PV_ROOT, "applications", application.getFileName().toString());
+    Path targetPath = Paths.get(PV_ROOT, "j2eeapplication", application.getFileName().toString());
     logger.info("Copy the application {0} to PV hostpath {1}", application, targetPath);
     assertDoesNotThrow(() -> {
-      logger.info("Walk top level directory {0}", Paths.get(PV_ROOT, "applications").toString());
-      FileWalker.walk(Paths.get(PV_ROOT, "applications").toString());
+      logger.info("Walk top level directory {0}", Paths.get(PV_ROOT, "j2eeapplication").toString());
+      FileWalker.walk(Paths.get(PV_ROOT, "j2eeapplication").toString());
 
       // recreate PV_ROOT/applications/<application_directory_name>
       Files.createDirectories(targetPath);
-      deleteDirectory(Paths.get(PV_ROOT, "applications").toFile());
+      deleteDirectory(Paths.get(PV_ROOT, "application").toFile());
+      deleteDirectory(Paths.get(PV_ROOT, "j2eeapplication").toFile());
       Files.createDirectories(targetPath);
 
       logger.info("Walk directory after recreating directory {0}",
-          Paths.get(PV_ROOT, "applications").toString());
-      FileWalker.walk(Paths.get(PV_ROOT, "applications").toString());
+          Paths.get(PV_ROOT, "j2eeapplications").toString());
+      FileWalker.walk(Paths.get(PV_ROOT, "j2eeapplication").toString());
 
       // copy the application source to PV_ROOT/applications/<application_directory_name>
       copyDirectory(application.toFile(), targetPath.toFile());
@@ -129,7 +130,7 @@ public class BuildApplication {
 
       logger.info("Walk directory after copy {0}",
           Paths.get(PV_ROOT, "applications").toString());
-      FileWalker.walk(Paths.get(PV_ROOT, "applications").toString());
+      FileWalker.walk(Paths.get(PV_ROOT, "j2eeapplication").toString());
     });
 
     // create the persistent volume to make the application archive accessible to pod
@@ -162,7 +163,7 @@ public class BuildApplication {
         .addCommandItem("/bin/sh")
         .addArgsItem("-c")
         .addArgsItem("ls -l ")
-        .addArgsItem(APPLICATIONS_MOUNT_PATH);
+        .addArgsItem("/j2eeapplication");
 
     // add ant properties to env
     if (parameters != null) {
@@ -220,7 +221,7 @@ public class BuildApplication {
                         .image(image)
                         .addCommandItem("/bin/sh")
                         .addArgsItem("-c")
-                        .addArgsItem("chown -R 1000:1000 /application")
+                        .addArgsItem("chown -R 1000:1000 /j2eeapplication")
                         .addArgsItem(APPLICATIONS_MOUNT_PATH)
                         .volumeMounts(Arrays.asList(
                             new V1VolumeMount()
@@ -237,7 +238,7 @@ public class BuildApplication {
                         .volumeMounts(Arrays.asList(
                             new V1VolumeMount()
                                 .name(pvName)
-                                .mountPath("/application"))))) // application source directory
+                                .mountPath("/j2eeapplication"))))) // application source directory
                     .volumes(Arrays.asList(new V1Volume()
                         .name(pvName)
                         .persistentVolumeClaim(
