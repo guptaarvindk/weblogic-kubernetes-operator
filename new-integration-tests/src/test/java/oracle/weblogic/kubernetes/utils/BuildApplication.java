@@ -98,15 +98,15 @@ public class BuildApplication {
 
     setImage(namespace);
 
-    // Copy the application source directory to PV_ROOT/applications/<application_directory_name>
-    // This location is mounted in the build pod under /application
+    // Copy the application source directory to PV_ROOT/j2eeapplications/<application_directory_name>
+    // This location is mounted in the build pod under /j2eeapplication
     Path targetPath = Paths.get(PV_ROOT, "j2eeapplication", application.getFileName().toString());
     logger.info("Copy the application {0} to PV hostpath {1}", application, targetPath);
     assertDoesNotThrow(() -> {
       logger.info("Walk top level directory {0}", Paths.get(PV_ROOT, "j2eeapplication").toString());
       FileWalker.walk(Paths.get(PV_ROOT, "j2eeapplication").toString());
 
-      // recreate PV_ROOT/applications/<application_directory_name>
+      // recreate PV_ROOT/j2eeapplications/<application_directory_name>
       Files.createDirectories(targetPath);
       deleteDirectory(Paths.get(PV_ROOT, "application").toFile());
       deleteDirectory(Paths.get(PV_ROOT, "j2eeapplication").toFile());
@@ -116,10 +116,10 @@ public class BuildApplication {
           Paths.get(PV_ROOT, "j2eeapplications").toString());
       FileWalker.walk(Paths.get(PV_ROOT, "j2eeapplication").toString());
 
-      // copy the application source to PV_ROOT/applications/<application_directory_name>
+      // copy the application source to PV_ROOT/j2eeapplications/<application_directory_name>
       copyDirectory(application.toFile(), targetPath.toFile());
 
-      // copy the build script to PV_ROOT/applications/<application_directory_name>
+      // copy the build script to PV_ROOT/j2eeapplications/<application_directory_name>
       Path targetBuildScript = Paths.get(targetPath.toString(),
           BUILD_SCRIPT_SOURCE_PATH.getFileName().toString());
       logger.info("targetBuildScript {0}", targetBuildScript);
@@ -222,11 +222,10 @@ public class BuildApplication {
                         .addCommandItem("/bin/sh")
                         .addArgsItem("-c")
                         .addArgsItem("chown -R 1000:1000 /j2eeapplication")
-                        .addArgsItem(APPLICATIONS_MOUNT_PATH)
                         .volumeMounts(Arrays.asList(
                             new V1VolumeMount()
                                 .name(pvName)
-                                .mountPath("/application")))
+                                .mountPath("/j2eeapplication")))
                         .securityContext(new V1SecurityContext()
                             .runAsGroup(0L)
                             .runAsUser(0L))))
