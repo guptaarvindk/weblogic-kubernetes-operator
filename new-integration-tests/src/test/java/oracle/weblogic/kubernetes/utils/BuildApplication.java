@@ -107,6 +107,7 @@ public class BuildApplication {
           Paths.get(PV_ROOT, "applications").toString());
       FileWalker.walk(Paths.get(PV_ROOT, "applications").toString());
 
+      // recreate PV_ROOT/applications/<application_directory_name>
       Files.createDirectories(targetPath);
       deleteDirectory(Paths.get(PV_ROOT, "applications").toFile());
       Files.createDirectories(targetPath);
@@ -115,8 +116,10 @@ public class BuildApplication {
           Paths.get(PV_ROOT, "applications").toString());
       FileWalker.walk(targetPath.toString());
 
+      // copy the application source to PV_ROOT/applications/<application_directory_name>
       copyDirectory(application.toFile(), targetPath.toFile());
 
+      // copy the build script to PV_ROOT/applications/<application_directory_name>
       Path targetBuildScript = Paths.get(targetPath.toString(),
           BUILD_SCRIPT_SOURCE_PATH.getFileName().toString());
       logger.info("targetBuildScript {0}", targetBuildScript);
@@ -211,9 +214,10 @@ public class BuildApplication {
                     .initContainers(Arrays.asList(new V1Container()
                         .name("fix-pvc-owner") // change the ownership of the pv to opc:opc
                         .image(image)
-                        .addCommandItem("/bin/sh -c \"chown -R 1000:1000 "
-                            + APPLICATIONS_MOUNT_PATH + ";chmod 755 "
-                            + APPLICATIONS_MOUNT_PATH + "/" + BUILD_SCRIPT + "\"")
+                        .addCommandItem("/bin/sh")
+                        .addArgsItem("-c")
+                        .addArgsItem("chown -R 1000:1000")
+                        .addArgsItem(APPLICATIONS_MOUNT_PATH)
                         .volumeMounts(Arrays.asList(
                             new V1VolumeMount()
                                 .name(pvName)
