@@ -100,21 +100,21 @@ public class BuildApplication {
 
     // Copy the application source directory to PV_ROOT/j2eeapplications/<application_directory_name>
     // This location is mounted in the build pod under /j2eeapplication
-    Path targetPath = Paths.get(PV_ROOT, "j2eeapplication", application.getFileName().toString());
+    Path targetPath = Paths.get(PV_ROOT, "j2eeapplications", application.getFileName().toString());
     logger.info("Copy the application {0} to PV hostpath {1}", application, targetPath);
     assertDoesNotThrow(() -> {
-      logger.info("Walk top level directory {0}", Paths.get(PV_ROOT, "j2eeapplication").toString());
-      FileWalker.walk(Paths.get(PV_ROOT, "j2eeapplication").toString());
+      logger.info("Walk top level directory {0}", Paths.get(PV_ROOT, "j2eeapplications").toString());
+      FileWalker.walk(Paths.get(PV_ROOT, "j2eeapplications").toString());
 
       // recreate PV_ROOT/j2eeapplications/<application_directory_name>
       Files.createDirectories(targetPath);
-      deleteDirectory(Paths.get(PV_ROOT, "application").toFile());
-      deleteDirectory(Paths.get(PV_ROOT, "j2eeapplication").toFile());
+      deleteDirectory(Paths.get(PV_ROOT, "applications").toFile());
+      deleteDirectory(Paths.get(PV_ROOT, "j2eeapplications").toFile());
       Files.createDirectories(targetPath);
 
       logger.info("Walk directory after recreating directory {0}",
           Paths.get(PV_ROOT, "j2eeapplications").toString());
-      FileWalker.walk(Paths.get(PV_ROOT, "j2eeapplication").toString());
+      FileWalker.walk(Paths.get(PV_ROOT, "j2eeapplications").toString());
 
       // copy the application source to PV_ROOT/j2eeapplications/<application_directory_name>
       copyDirectory(application.toFile(), targetPath.toFile());
@@ -129,8 +129,8 @@ public class BuildApplication {
       boolean setExecutable = new File(targetBuildScript.toString()).setExecutable(true, false);
 
       logger.info("Walk directory after copy {0}",
-          Paths.get(PV_ROOT, "applications").toString());
-      FileWalker.walk(Paths.get(PV_ROOT, "j2eeapplication").toString());
+          Paths.get(PV_ROOT, "j2eeapplications").toString());
+      FileWalker.walk(Paths.get(PV_ROOT, "j2eeapplications").toString());
     });
 
     // create the persistent volume to make the application archive accessible to pod
