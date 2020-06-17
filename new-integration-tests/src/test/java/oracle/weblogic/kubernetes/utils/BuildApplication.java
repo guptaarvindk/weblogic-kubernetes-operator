@@ -143,7 +143,6 @@ public class BuildApplication {
 
     // build application
     build(parameters, targets, pvName, pvcName, namespace);
-    fail("Fail");
   }
 
   /**
@@ -162,8 +161,7 @@ public class BuildApplication {
     V1Container jobCreationContainer = new V1Container()
         .addCommandItem("/bin/sh")
         .addArgsItem("-c")
-        .addArgsItem("ls -l ")
-        .addArgsItem("/j2eeapplication");
+        .addArgsItem("/j2eeapplication/build_application.sh");
 
     // add ant properties to env
     if (parameters != null) {
