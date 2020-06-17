@@ -179,7 +179,6 @@ public class BuildApplication {
    *
    * @param pvName name of the persistent volume containing application source
    * @param pvcName name of the persistent volume claim
-   * @param buildScriptConfigMapName configmap holding build script files
    * @param namespace name of the domain namespace in which the job is created
    * @param jobContainer V1Container with job commands to build application
    * @throws ApiException when Kubernetes cluster query fails
@@ -203,12 +202,9 @@ public class BuildApplication {
                     .initContainers(Arrays.asList(new V1Container()
                         .name("fix-pvc-owner") // change the ownership of the pv to opc:opc
                         .image(image)
-                        .addCommandItem("/bin/sh")
-                        .addArgsItem("-c")
-                        .addArgsItem("chown -R 1000:1000 " + APPLICATIONS_MOUNT_PATH)
-                        .addCommandItem("/bin/sh")
-                        .addArgsItem("-c")
-                        .addArgsItem("chmod 755 " + APPLICATIONS_MOUNT_PATH + "/" + BUILD_SCRIPT)
+                        .addCommandItem("/bin/sh -c \"chown -R 1000:1000 "
+                            + APPLICATIONS_MOUNT_PATH + ";chmod 755 "
+                            + APPLICATIONS_MOUNT_PATH + "/" + BUILD_SCRIPT + "\"")
                         .volumeMounts(Arrays.asList(
                             new V1VolumeMount()
                                 .name(pvName)
