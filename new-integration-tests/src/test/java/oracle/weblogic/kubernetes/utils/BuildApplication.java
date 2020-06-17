@@ -217,12 +217,12 @@ public class BuildApplication {
                         .image(image)
                         .addCommandItem("/bin/sh")
                         .addArgsItem("-c")
-                        .addArgsItem("chown -R 1000:1000")
+                        .addArgsItem("chown -R 1000:1000 /application")
                         .addArgsItem(APPLICATIONS_MOUNT_PATH)
                         .volumeMounts(Arrays.asList(
                             new V1VolumeMount()
                                 .name(pvName)
-                                .mountPath(APPLICATIONS_MOUNT_PATH)))
+                                .mountPath("/application")))
                         .securityContext(new V1SecurityContext()
                             .runAsGroup(0L)
                             .runAsUser(0L))))
@@ -234,7 +234,7 @@ public class BuildApplication {
                         .volumeMounts(Arrays.asList(
                             new V1VolumeMount()
                                 .name(pvName)
-                                .mountPath(APPLICATIONS_MOUNT_PATH))))) // application source directory
+                                .mountPath("/application"))))) // application source directory
                     .volumes(Arrays.asList(new V1Volume()
                         .name(pvName)
                         .persistentVolumeClaim(
