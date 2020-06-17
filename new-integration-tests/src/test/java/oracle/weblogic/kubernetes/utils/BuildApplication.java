@@ -76,7 +76,6 @@ public class BuildApplication {
   private static String image;
   private static boolean isUseSecret;
   private static final String APPLICATIONS_MOUNT_PATH = "/application";
-  private static final String SCRIPTS_MOUNT_PATH = "/buildScripts";
   private static final String BUILD_SCRIPT = "build_application.sh";
   private static final Path BUILD_SCRIPT_SOURCE_PATH = Paths.get(RESOURCE_DIR, "bash-scripts", BUILD_SCRIPT);
 
@@ -103,8 +102,7 @@ public class BuildApplication {
     Path targetPath = Paths.get(PV_ROOT, "applications", application.getFileName().toString());
     logger.info("Copy the application {0} to PV hostpath {1}", application, targetPath);
     assertDoesNotThrow(() -> {
-      logger.info("{{{{{{{{{{{Walk top level directory {0}}}}}}}}}}}}",
-          Paths.get(PV_ROOT, "applications").toString());
+      logger.info("Walk top level directory {0}", Paths.get(PV_ROOT, "applications").toString());
       FileWalker.walk(Paths.get(PV_ROOT, "applications").toString());
 
       // recreate PV_ROOT/applications/<application_directory_name>
@@ -112,9 +110,9 @@ public class BuildApplication {
       deleteDirectory(Paths.get(PV_ROOT, "applications").toFile());
       Files.createDirectories(targetPath);
 
-      logger.info("{{{{{{{{{{{Walk directory after recreating directory {0}}}}}}}}}}}}",
+      logger.info("Walk directory after recreating directory {0}",
           Paths.get(PV_ROOT, "applications").toString());
-      FileWalker.walk(targetPath.toString());
+      FileWalker.walk(Paths.get(PV_ROOT, "applications").toString());
 
       // copy the application source to PV_ROOT/applications/<application_directory_name>
       copyDirectory(application.toFile(), targetPath.toFile());
@@ -127,7 +125,8 @@ public class BuildApplication {
           targetBuildScript);
       Files.copy(BUILD_SCRIPT_SOURCE_PATH, targetBuildScript);
 
-      logger.info("{{{{{{{{{{{Walk directory after copy}}}}}}}}}}}");
+      logger.info("Walk directory after copy {0}",
+          Paths.get(PV_ROOT, "applications").toString());
       FileWalker.walk(Paths.get(PV_ROOT, "applications").toString());
     });
 
