@@ -142,6 +142,7 @@ public class BuildApplication {
 
     // build application
     build(parameters, targets, pvName, pvcName, namespace);
+    fail("Fail");
   }
 
   /**
@@ -159,7 +160,9 @@ public class BuildApplication {
 
     V1Container jobCreationContainer = new V1Container()
         .addCommandItem("/bin/sh")
-        .addArgsItem(APPLICATIONS_MOUNT_PATH + "/" + BUILD_SCRIPT);
+        .addArgsItem("-c")
+        .addArgsItem("ls -l ")
+        .addArgsItem(APPLICATIONS_MOUNT_PATH);
 
     // add ant properties to env
     if (parameters != null) {
@@ -273,6 +276,10 @@ public class BuildApplication {
           logger.severe(getPodLog(pods.get(0).getMetadata().getName(), namespace));
           fail("Build job failed");
         }
+      }
+      List<V1Pod> pods = listPods(namespace, "job-name=" + jobName).getItems();
+      if (!pods.isEmpty()) {
+        logger.info(getPodLog(pods.get(0).getMetadata().getName(), namespace));
       }
     }
 
