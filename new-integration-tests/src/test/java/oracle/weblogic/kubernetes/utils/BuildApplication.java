@@ -3,6 +3,7 @@
 
 package oracle.weblogic.kubernetes.utils;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -124,6 +125,7 @@ public class BuildApplication {
       logger.info("Copying {0} to {1}", BUILD_SCRIPT_SOURCE_PATH,
           targetBuildScript);
       Files.copy(BUILD_SCRIPT_SOURCE_PATH, targetBuildScript);
+      boolean setExecutable = new File(targetBuildScript.toString()).setExecutable(true, false);
 
       logger.info("Walk directory after copy {0}",
           Paths.get(PV_ROOT, "applications").toString());
