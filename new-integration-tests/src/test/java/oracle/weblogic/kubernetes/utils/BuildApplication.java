@@ -106,19 +106,24 @@ public class BuildApplication {
       logger.info("{{{{{{{{{{{Walk top level directory {0}}}}}}}}}}}}",
           Paths.get(PV_ROOT, "applications").toString());
       FileWalker.walk(Paths.get(PV_ROOT, "applications").toString());
+
       Files.createDirectories(targetPath);
       deleteDirectory(Paths.get(PV_ROOT, "applications").toFile());
       Files.createDirectories(targetPath);
+
       logger.info("{{{{{{{{{{{Walk directory after recreating directory {0}}}}}}}}}}}}",
           Paths.get(PV_ROOT, "applications").toString());
       FileWalker.walk(targetPath.toString());
+
       copyDirectory(application.toFile(), targetPath.toFile());
-      logger.info("Copying {0} to {1}", BUILD_SCRIPT_SOURCE_PATH,
-          targetPath.resolve(BUILD_SCRIPT_SOURCE_PATH.getFileName()));
+
       Path targetBuildScript = Paths.get(targetPath.toString(),
           BUILD_SCRIPT_SOURCE_PATH.getFileName().toString());
       logger.info("targetBuildScript {0}", targetBuildScript);
+      logger.info("Copying {0} to {1}", BUILD_SCRIPT_SOURCE_PATH,
+          targetBuildScript);
       Files.copy(BUILD_SCRIPT_SOURCE_PATH, targetBuildScript);
+
       logger.info("{{{{{{{{{{{Walk directory after copy}}}}}}}}}}}");
       FileWalker.walk(Paths.get(PV_ROOT, "applications").toString());
     });
