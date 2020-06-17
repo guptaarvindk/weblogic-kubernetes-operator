@@ -162,7 +162,7 @@ public class BuildApplication {
     V1Container jobCreationContainer = new V1Container()
         .addCommandItem("/bin/sh")
         .addArgsItem("-c")
-        .addArgsItem("ls -l /; ls -l /j2eeapplication");
+        .addArgsItem("ls -l /; ls -l /u01/j2eeapplication");
 
     // add ant properties to env
     if (parameters != null) {
@@ -220,11 +220,11 @@ public class BuildApplication {
                         .image(image)
                         .addCommandItem("/bin/sh")
                         .addArgsItem("-c")
-                        .addArgsItem("chown -R 1000:1000 /j2eeapplication")
+                        .addArgsItem("chown -R 1000:1000 /u01/j2eeapplication")
                         .volumeMounts(Arrays.asList(
                             new V1VolumeMount()
                                 .name(pvName)
-                                .mountPath("/j2eeapplication")))
+                                .mountPath("/u01/j2eeapplication")))
                         .securityContext(new V1SecurityContext()
                             .runAsGroup(0L)
                             .runAsUser(0L))))
@@ -236,7 +236,7 @@ public class BuildApplication {
                         .volumeMounts(Arrays.asList(
                             new V1VolumeMount()
                                 .name(pvName)
-                                .mountPath("/j2eeapplication"))))) // application source directory
+                                .mountPath("/u01/j2eeapplication"))))) // application source directory
                     .volumes(Arrays.asList(new V1Volume()
                         .name(pvName)
                         .persistentVolumeClaim(
