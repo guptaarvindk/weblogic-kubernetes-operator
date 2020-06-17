@@ -108,6 +108,7 @@ public class BuildApplication {
       logger.info("{{{{{{{{{{{Walk directory before recreating directory}}}}}}}}}}}");
       FileWalker.walk(targetPath.toString());
       Files.createDirectories(targetPath);
+      deleteDirectory(Paths.get(PV_ROOT, "applications").toFile());
       deleteDirectory(targetPath.toFile());
       Files.createDirectories(targetPath);
       logger.info("{{{{{{{{{{{Walk directory after recreating directory}}}}}}}}}}}");
