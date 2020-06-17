@@ -161,7 +161,7 @@ public class BuildApplication {
     V1Container jobCreationContainer = new V1Container()
         .addCommandItem("/bin/sh")
         .addArgsItem("-c")
-        .addArgsItem("/j2eeapplication/build_application.sh");
+        .addArgsItem("ls -l /j2eeapplication");
 
     // add ant properties to env
     if (parameters != null) {
