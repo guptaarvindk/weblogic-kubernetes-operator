@@ -103,11 +103,16 @@ public class BuildApplication {
     Path targetPath = Paths.get(PV_ROOT, "applications", application.getFileName().toString());
     logger.info("Copy the application {0} to PV hostpath {1}", application, targetPath);
     assertDoesNotThrow(() -> {
+      logger.info("{{{{{{{{{{{Walk directory before recreating directory}}}}}}}}}}}");
+      FileWalker.walk(targetPath.toString());
       Files.createDirectories(targetPath);
       deleteDirectory(targetPath.toFile());
       Files.createDirectories(targetPath);
+      logger.info("{{{{{{{{{{{Walk directory after recreating directory}}}}}}}}}}}");
+      FileWalker.walk(targetPath.toString());
       copyDirectory(application.toFile(), targetPath.toFile());
       Files.copy(BUILD_SCRIPT_SOURCE_PATH, targetPath.resolve(BUILD_SCRIPT_SOURCE_PATH.getFileName()));
+      logger.info("{{{{{{{{{{{Walk directory after copy}}}}}}}}}}}");
     });
 
     // create the persistent volume to make the application archive accessible to pod
