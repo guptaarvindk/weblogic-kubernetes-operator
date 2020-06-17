@@ -116,6 +116,9 @@ public class BuildApplication {
       copyDirectory(application.toFile(), targetPath.toFile());
       logger.info("Copying {0} to {1}", BUILD_SCRIPT_SOURCE_PATH,
           targetPath.resolve(BUILD_SCRIPT_SOURCE_PATH.getFileName()));
+      Path targetBuildScript = Paths.get(targetPath.toString(),
+          BUILD_SCRIPT_SOURCE_PATH.getFileName().toString());
+      logger.info("targetBuildScript {0}", targetBuildScript);
       Files.copy(BUILD_SCRIPT_SOURCE_PATH, targetPath.resolve(BUILD_SCRIPT_SOURCE_PATH.getFileName()));
       logger.info("{{{{{{{{{{{Walk directory after copy}}}}}}}}}}}");
       FileWalker.walk(Paths.get(PV_ROOT, "applications").toString());
