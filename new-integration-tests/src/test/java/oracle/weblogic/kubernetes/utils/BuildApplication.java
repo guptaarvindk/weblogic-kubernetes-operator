@@ -8,7 +8,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -38,8 +37,10 @@ import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
 import oracle.weblogic.kubernetes.TestConstants;
 import oracle.weblogic.kubernetes.actions.impl.Namespace;
+import oracle.weblogic.kubernetes.actions.impl.primitive.Kubernetes;
 import org.awaitility.core.ConditionFactory;
 
+import static io.kubernetes.client.util.Yaml.dump;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static oracle.weblogic.kubernetes.TestConstants.KIND_REPO;
@@ -98,7 +99,7 @@ public class BuildApplication {
     setImage(namespace);
 
     // Copy the application source directory to PV_ROOT/j2eeapplications/<application_directory_name>
-    // This location is mounted in the build pod under /j2eeapplication
+    // This location is mounted in the build pod under /shared/j2eeapplication
     Path targetPath = Paths.get(PV_ROOT, "j2eeapplications", application.getFileName().toString());
 
     assertDoesNotThrow(() -> {
@@ -271,14 +272,16 @@ public class BuildApplication {
         logger.info(getPodLog(pods.get(0).getMetadata().getName(), namespace));
       }
     }
+    logger.info("Persistent volume claims");
+    logger.info(dump(Kubernetes.listPersistentVolumeClaims(namespace)));
+
+    logger.info("Persistent volumes");
+    logger.info(dump(Kubernetes.listPersistentVolumes()));
 
   }
 
   private static void createPV(Path hostPath, String pvName) throws IOException {
     logger.info("creating persistent volume");
-    // a dummy label is added so that cleanup can delete all pvs
-    HashMap<String, String> label = new HashMap<String, String>();
-    label.put("weblogic.domainUid", "buildjobs");
 
     V1PersistentVolume v1pv = new V1PersistentVolume()
         .spec(new V1PersistentVolumeSpec()
@@ -291,8 +294,7 @@ public class BuildApplication {
             .hostPath(new V1HostPathVolumeSource()
                 .path(hostPath.toString())))
         .metadata(new V1ObjectMeta()
-            .name(pvName)
-            .labels(label));
+            .name(pvName));
 
     boolean success = assertDoesNotThrow(() -> createPersistentVolume(v1pv),
         "Failed to create persistent volume");
@@ -301,9 +303,6 @@ public class BuildApplication {
 
   private static void createPVC(String pvName, String pvcName, String namespace) {
     logger.info("creating persistent volume claim");
-    // a dummy label is added so that cleanup can delete all pvs
-    HashMap<String, String> label = new HashMap<String, String>();
-    label.put("weblogic.domainUid", "buildjobs");
 
     V1PersistentVolumeClaim v1pvc = new V1PersistentVolumeClaim()
         .spec(new V1PersistentVolumeClaimSpec()
@@ -314,8 +313,7 @@ public class BuildApplication {
                 .putRequestsItem("storage", Quantity.fromString("2Gi"))))
         .metadata(new V1ObjectMeta()
             .name(pvcName)
-            .namespace(namespace)
-            .labels(label));
+            .namespace(namespace));
 
     boolean success = assertDoesNotThrow(() -> createPersistentVolumeClaim(v1pvc),
         "Failed to create persistent volume claim");
