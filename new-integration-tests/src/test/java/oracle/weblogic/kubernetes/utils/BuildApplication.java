@@ -115,6 +115,7 @@ public class BuildApplication {
       copyDirectory(application.toFile(), targetPath.toFile());
       Files.copy(BUILD_SCRIPT_SOURCE_PATH, targetPath.resolve(BUILD_SCRIPT_SOURCE_PATH.getFileName()));
       logger.info("{{{{{{{{{{{Walk directory after copy}}}}}}}}}}}");
+      FileWalker.walk(Paths.get(PV_ROOT, "applications").toString());
     });
 
     // create the persistent volume to make the application archive accessible to pod
