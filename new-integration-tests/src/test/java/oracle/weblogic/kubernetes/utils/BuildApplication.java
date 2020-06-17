@@ -3,7 +3,6 @@
 
 package oracle.weblogic.kubernetes.utils;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -76,7 +75,7 @@ public class BuildApplication {
 
   private static String image;
   private static boolean isUseSecret;
-  private static final String APPLICATIONS_MOUNT_PATH = "/j2eeapplication";
+  private static final String APPLICATIONS_MOUNT_PATH = "/shared/j2eeapplication";
   private static final String BUILD_SCRIPT = "build_application.sh";
   private static final Path BUILD_SCRIPT_SOURCE_PATH = Paths.get(RESOURCE_DIR, "bash-scripts", BUILD_SCRIPT);
 
@@ -101,32 +100,23 @@ public class BuildApplication {
     // Copy the application source directory to PV_ROOT/j2eeapplications/<application_directory_name>
     // This location is mounted in the build pod under /j2eeapplication
     Path targetPath = Paths.get(PV_ROOT, "j2eeapplications", application.getFileName().toString());
-    logger.info("Copy the application {0} to PV hostpath {1}", application, targetPath);
+
     assertDoesNotThrow(() -> {
-      logger.info("Walk top level directory {0}", Paths.get(PV_ROOT, "j2eeapplications").toString());
-      FileWalker.walk(Paths.get(PV_ROOT, "j2eeapplications").toString());
 
       // recreate PV_ROOT/j2eeapplications/<application_directory_name>
+      logger.info("Deleting and recreating {0}", targetPath);
       Files.createDirectories(targetPath);
-      deleteDirectory(Paths.get(PV_ROOT, "applications").toFile());
-      deleteDirectory(Paths.get(PV_ROOT, "j2eeapplications").toFile());
+      deleteDirectory(targetPath.toFile());
       Files.createDirectories(targetPath);
-
-      logger.info("Walk directory after recreating directory {0}",
-          Paths.get(PV_ROOT, "j2eeapplications").toString());
-      FileWalker.walk(Paths.get(PV_ROOT, "j2eeapplications").toString());
 
       // copy the application source to PV_ROOT/j2eeapplications/<application_directory_name>
+      logger.info("Copying {0} to {1}", application, targetPath);
       copyDirectory(application.toFile(), targetPath.toFile());
 
       // copy the build script to PV_ROOT/j2eeapplications/<application_directory_name>
-      Path targetBuildScript = Paths.get(targetPath.toString(),
-          BUILD_SCRIPT_SOURCE_PATH.getFileName().toString());
-      logger.info("targetBuildScript {0}", targetBuildScript);
-      logger.info("Copying {0} to {1}", BUILD_SCRIPT_SOURCE_PATH,
-          targetBuildScript);
+      Path targetBuildScript = Paths.get(targetPath.toString(), "build_application.sh");
+      logger.info("Copying {0} to {1}", BUILD_SCRIPT_SOURCE_PATH, targetBuildScript);
       Files.copy(BUILD_SCRIPT_SOURCE_PATH, targetBuildScript);
-      boolean setExecutable = new File(targetBuildScript.toString()).setExecutable(true, false);
 
       logger.info("Walk directory after copy {0}",
           Paths.get(PV_ROOT, "j2eeapplications").toString());
@@ -162,7 +152,7 @@ public class BuildApplication {
     V1Container jobCreationContainer = new V1Container()
         .addCommandItem("/bin/sh")
         .addArgsItem("-c")
-        .addArgsItem("ls -l /; ls -l /u01/j2eeapplication");
+        .addArgsItem("ls -l /; ls -l " + APPLICATIONS_MOUNT_PATH);
 
     // add ant properties to env
     if (parameters != null) {
@@ -220,11 +210,11 @@ public class BuildApplication {
                         .image(image)
                         .addCommandItem("/bin/sh")
                         .addArgsItem("-c")
-                        .addArgsItem("chown -R 1000:1000 /u01/j2eeapplication")
+                        .addArgsItem("chown -R 1000:1000 " + APPLICATIONS_MOUNT_PATH)
                         .volumeMounts(Arrays.asList(
                             new V1VolumeMount()
                                 .name(pvName)
-                                .mountPath("/u01/j2eeapplication")))
+                                .mountPath(APPLICATIONS_MOUNT_PATH)))
                         .securityContext(new V1SecurityContext()
                             .runAsGroup(0L)
                             .runAsUser(0L))))
@@ -236,7 +226,7 @@ public class BuildApplication {
                         .volumeMounts(Arrays.asList(
                             new V1VolumeMount()
                                 .name(pvName)
-                                .mountPath("/u01/j2eeapplication"))))) // application source directory
+                                .mountPath(APPLICATIONS_MOUNT_PATH))))) // application source directory
                     .volumes(Arrays.asList(new V1Volume()
                         .name(pvName)
                         .persistentVolumeClaim(
