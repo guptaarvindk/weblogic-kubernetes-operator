@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -214,7 +215,7 @@ public class BuildApplication {
                         .addCommandItem("/bin/sh")
                         .addArgsItem("-c")
                         .addArgsItem(
-                            "chown -R 1000:1000 " + APPLICATIONS_MOUNT_PATH + ";"
+                            "chown -R oracle:oracle " + APPLICATIONS_MOUNT_PATH + ";"
                             + "chmod -R 777 " + APPLICATIONS_MOUNT_PATH)
                         .volumeMounts(Arrays.asList(
                             new V1VolumeMount()
@@ -286,6 +287,9 @@ public class BuildApplication {
 
   private static void createPV(Path hostPath, String pvName) throws IOException {
     logger.info("creating persistent volume");
+    // a dummy label is added so that cleanup can delete all pvs
+    HashMap<String, String> label = new HashMap<String, String>();
+    label.put("weblogic.domainUid", "buildjobs");
 
     V1PersistentVolume v1pv = new V1PersistentVolume()
         .spec(new V1PersistentVolumeSpec()
@@ -298,7 +302,8 @@ public class BuildApplication {
             .hostPath(new V1HostPathVolumeSource()
                 .path(hostPath.toString())))
         .metadata(new V1ObjectMeta()
-            .name(pvName));
+            .name(pvName)
+            .labels(label));
 
     boolean success = assertDoesNotThrow(() -> createPersistentVolume(v1pv),
         "Failed to create persistent volume");
@@ -307,6 +312,9 @@ public class BuildApplication {
 
   private static void createPVC(String pvName, String pvcName, String namespace) {
     logger.info("creating persistent volume claim");
+    // a dummy label is added so that cleanup can delete all pvs
+    HashMap<String, String> label = new HashMap<String, String>();
+    label.put("weblogic.domainUid", "buildjobs");
 
     V1PersistentVolumeClaim v1pvc = new V1PersistentVolumeClaim()
         .spec(new V1PersistentVolumeClaimSpec()
@@ -317,7 +325,8 @@ public class BuildApplication {
                 .putRequestsItem("storage", Quantity.fromString("2Gi"))))
         .metadata(new V1ObjectMeta()
             .name(pvcName)
-            .namespace(namespace));
+            .namespace(namespace)
+            .labels(label));
 
     boolean success = assertDoesNotThrow(() -> createPersistentVolumeClaim(v1pvc),
         "Failed to create persistent volume claim");
