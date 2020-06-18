@@ -213,7 +213,9 @@ public class BuildApplication {
                         .image(image)
                         .addCommandItem("/bin/sh")
                         .addArgsItem("-c")
-                        .addArgsItem("chown -R 1000:1000 " + APPLICATIONS_MOUNT_PATH)
+                        .addArgsItem(
+                            "chown -R 1000:1000 " + APPLICATIONS_MOUNT_PATH + ";"
+                            + "chmod -R 777 " + APPLICATIONS_MOUNT_PATH)
                         .volumeMounts(Arrays.asList(
                             new V1VolumeMount()
                                 .name(pvName)
