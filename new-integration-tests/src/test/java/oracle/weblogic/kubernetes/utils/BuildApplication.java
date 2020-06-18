@@ -106,24 +106,15 @@ public class BuildApplication {
 
     assertDoesNotThrow(() -> {
 
+      logger.info("Walk directory after copy {0}",
+          Paths.get(PV_ROOT, ".."));
+      FileWalker.walk(Paths.get(PV_ROOT, "..").toString());
+
       // recreate PV_ROOT/j2eeapplications/<application_directory_name>
       logger.info("Deleting and recreating {0}", targetPath);
       Files.createDirectories(targetPath);
       deleteDirectory(targetPath.toFile());
       Files.createDirectories(targetPath);
-
-      logger.info("\n\n\n\n\n");
-      logger.info("Listing under {0}/..", PV_ROOT);
-      FileWalker.walk(Paths.get(PV_ROOT, "..").toString());
-      logger.info("\n\n\n\n\n");
-
-      logger.info("Listing under {0}", PV_ROOT);
-      FileWalker.walk(Paths.get(PV_ROOT).toString());
-      logger.info("\n\n\n\n\n");
-
-      logger.info("Listing under {0}/j2eeapplications", PV_ROOT);
-      FileWalker.walk(Paths.get(PV_ROOT, "j2eeapplications").toString());
-      logger.info("\n\n\n\n\n");
 
       // copy the application source to PV_ROOT/j2eeapplications/<application_directory_name>
       logger.info("Copying {0} to {1}", application, targetPath);
@@ -173,10 +164,11 @@ public class BuildApplication {
     V1Container jobCreationContainer = new V1Container()
         .addCommandItem("/bin/sh")
         .addArgsItem("-c")
-        .addArgsItem("ls -l /;"
+        .addArgsItem("ls -l / ;"
             + "ls -l " + APPLICATIONS_MOUNT_PATH + ";"
-            + " touch " + APPLICATIONS_MOUNT_PATH + "/tempfile.txt;"
-            + "ls -l " + APPLICATIONS_MOUNT_PATH);
+            + "touch " + APPLICATIONS_MOUNT_PATH + "/tempfile.txt;"
+            + "ls -l " + APPLICATIONS_MOUNT_PATH + ";"
+        + "sleep 300");
 
     // add ant properties to env
     if (parameters != null) {
@@ -231,12 +223,12 @@ public class BuildApplication {
                 .spec(new V1PodSpec()
                     .initContainers(Arrays.asList(new V1Container()
                         .name("fix-pvc-owner") // change the ownership of the pv to opc:opc
-                        .image("openjdk:11-oracle") //.image(image)
+                        .image(image)
                         .imagePullPolicy("Always")
                         .addCommandItem("/bin/sh")
                         .addArgsItem("-c")
                         .addArgsItem(
-                            "chown -R opc:opc " + APPLICATIONS_MOUNT_PATH + ";"
+                            "chown -R 1000:1000 " + APPLICATIONS_MOUNT_PATH + ";"
                             + "chmod -R 777 " + APPLICATIONS_MOUNT_PATH)
                         .volumeMounts(Arrays.asList(
                             new V1VolumeMount()
@@ -248,7 +240,7 @@ public class BuildApplication {
                     .restartPolicy("Never")
                     .containers(Arrays.asList(jobContainer
                         .name("build-application-container")
-                        .image("openjdk:11-oracle") //.image(image)
+                        .image(image)
                         .imagePullPolicy("Always")
                         .volumeMounts(Arrays.asList(
                             new V1VolumeMount()
