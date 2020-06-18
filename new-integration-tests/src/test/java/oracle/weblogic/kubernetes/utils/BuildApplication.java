@@ -125,10 +125,6 @@ public class BuildApplication {
       FileWalker.walk(Paths.get(PV_ROOT, "j2eeapplications").toString());
       logger.info("\n\n\n\n\n");
 
-      logger.info("Listing under {0}", targetPath);
-      FileWalker.walk(targetPath.toString());
-      logger.info("\n\n\n\n\n");
-
       // copy the application source to PV_ROOT/j2eeapplications/<application_directory_name>
       logger.info("Copying {0} to {1}", application, targetPath);
       copyDirectory(application.toFile(), targetPath.toFile());
