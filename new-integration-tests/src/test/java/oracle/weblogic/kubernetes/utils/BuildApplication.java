@@ -21,6 +21,7 @@ import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1JobCondition;
 import io.kubernetes.client.openapi.models.V1JobSpec;
 import io.kubernetes.client.openapi.models.V1LocalObjectReference;
+import io.kubernetes.client.openapi.models.V1NFSVolumeSource;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.kubernetes.client.openapi.models.V1PersistentVolume;
 import io.kubernetes.client.openapi.models.V1PersistentVolumeClaim;
@@ -100,7 +101,7 @@ public class BuildApplication {
     setImage(namespace);
 
     // Copy the application source directory to PV_ROOT/j2eeapplications/<application_directory_name>
-    // This location is mounted in the build pod under /shared/j2eeapplication
+    // This location is mounted in the build pod under /application
     Path targetPath = Paths.get(PV_ROOT, "j2eeapplications", application.getFileName().toString());
 
     assertDoesNotThrow(() -> {
@@ -110,6 +111,23 @@ public class BuildApplication {
       Files.createDirectories(targetPath);
       deleteDirectory(targetPath.toFile());
       Files.createDirectories(targetPath);
+
+      logger.info("\n\n\n\n\n");
+      logger.info("Listing under {0}/.." + PV_ROOT);
+      FileWalker.walk(Paths.get(PV_ROOT, "..").toString());
+      logger.info("\n\n\n\n\n");
+
+      logger.info("Listing under {0}" + PV_ROOT);
+      FileWalker.walk(Paths.get(PV_ROOT).toString());
+      logger.info("\n\n\n\n\n");
+
+      logger.info("Listing under {0}/j2eeapplications" + PV_ROOT);
+      FileWalker.walk(Paths.get(PV_ROOT, "j2eeapplications").toString());
+      logger.info("\n\n\n\n\n");
+
+      logger.info("Listing under {0}" + targetPath);
+      FileWalker.walk(targetPath.toString());
+      logger.info("\n\n\n\n\n");
 
       // copy the application source to PV_ROOT/j2eeapplications/<application_directory_name>
       logger.info("Copying {0} to {1}", application, targetPath);
@@ -308,6 +326,32 @@ public class BuildApplication {
             .accessModes(Arrays.asList("ReadWriteMany"))
             .hostPath(new V1HostPathVolumeSource()
                 .path(hostPath.toString())))
+        .metadata(new V1ObjectMeta()
+            .name(pvName)
+            .labels(label));
+
+    boolean success = assertDoesNotThrow(() -> createPersistentVolume(v1pv),
+        "Failed to create persistent volume");
+    assertTrue(success, "PersistentVolume creation failed");
+  }
+
+  private static void createNFSPV(Path hostPath, String pvName) throws IOException {
+    logger.info("creating persistent volume using NFS path");
+    // a dummy label is added so that cleanup can delete all pvs
+    HashMap<String, String> label = new HashMap<String, String>();
+    label.put("weblogic.domainUid", "buildjobs");
+
+    V1PersistentVolume v1pv = new V1PersistentVolume()
+        .spec(new V1PersistentVolumeSpec()
+            .nfs(new V1NFSVolumeSource()
+                .path(hostPath.toString())
+                .server("0.0.0.0")
+                .readOnly(false))
+            .addAccessModesItem("ReadWriteMany")
+            .storageClassName("weblogic-build-storage-class")
+            .putCapacityItem("storage", Quantity.fromString("10Gi"))
+            .persistentVolumeReclaimPolicy("Retain")
+            .accessModes(Arrays.asList("ReadWriteMany")))
         .metadata(new V1ObjectMeta()
             .name(pvName)
             .labels(label));
