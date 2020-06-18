@@ -33,7 +33,6 @@ import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
 import io.kubernetes.client.openapi.models.V1ResourceRequirements;
 import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1SecretList;
-import io.kubernetes.client.openapi.models.V1SecurityContext;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
 import oracle.weblogic.kubernetes.TestConstants;
@@ -155,6 +154,8 @@ public class BuildApplication {
         .addCommandItem("/bin/sh")
         .addArgsItem("-c")
         .addArgsItem("ls -l /;"
+            + "ls -l /shared;"
+            + "ls -l " + APPLICATIONS_MOUNT_PATH + ";"
             + " touch " + APPLICATIONS_MOUNT_PATH + "/tempfile.txt;"
             + "ls -l " + APPLICATIONS_MOUNT_PATH);
 
@@ -209,21 +210,6 @@ public class BuildApplication {
             .backoffLimit(0) // try only once
             .template(new V1PodTemplateSpec()
                 .spec(new V1PodSpec()
-                    .initContainers(Arrays.asList(new V1Container()
-                        .name("fix-pvc-owner") // change the ownership of the pv to opc:opc
-                        .image(image)
-                        .addCommandItem("/bin/sh")
-                        .addArgsItem("-c")
-                        .addArgsItem(
-                            "chown -R oracle:oracle " + APPLICATIONS_MOUNT_PATH + ";"
-                            + "chmod -R 777 " + APPLICATIONS_MOUNT_PATH)
-                        .volumeMounts(Arrays.asList(
-                            new V1VolumeMount()
-                                .name(pvName)
-                                .mountPath(APPLICATIONS_MOUNT_PATH)))
-                        .securityContext(new V1SecurityContext()
-                            .runAsGroup(0L)
-                            .runAsUser(0L))))
                     .restartPolicy("Never")
                     .containers(Arrays.asList(jobContainer
                         .name("build-application-container")
