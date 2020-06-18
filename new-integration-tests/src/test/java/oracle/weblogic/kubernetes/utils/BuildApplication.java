@@ -307,10 +307,6 @@ public class BuildApplication {
 
     logger.info("Persistent volumes");
     logger.info(dump(Kubernetes.listPersistentVolumes()));
-
-    logger.info("Job ");
-    logger.info(dump(Kubernetes.list))
-
   }
 
   private static void createPV(Path hostPath, String pvName) throws IOException {
