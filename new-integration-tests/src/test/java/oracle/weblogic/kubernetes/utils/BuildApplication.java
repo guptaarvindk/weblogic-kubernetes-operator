@@ -113,19 +113,19 @@ public class BuildApplication {
       Files.createDirectories(targetPath);
 
       logger.info("\n\n\n\n\n");
-      logger.info("Listing under {0}/.." + PV_ROOT);
+      logger.info("Listing under {0}/..", PV_ROOT);
       FileWalker.walk(Paths.get(PV_ROOT, "..").toString());
       logger.info("\n\n\n\n\n");
 
-      logger.info("Listing under {0}" + PV_ROOT);
+      logger.info("Listing under {0}", PV_ROOT);
       FileWalker.walk(Paths.get(PV_ROOT).toString());
       logger.info("\n\n\n\n\n");
 
-      logger.info("Listing under {0}/j2eeapplications" + PV_ROOT);
+      logger.info("Listing under {0}/j2eeapplications", PV_ROOT);
       FileWalker.walk(Paths.get(PV_ROOT, "j2eeapplications").toString());
       logger.info("\n\n\n\n\n");
 
-      logger.info("Listing under {0}" + targetPath);
+      logger.info("Listing under {0}", targetPath);
       FileWalker.walk(targetPath.toString());
       logger.info("\n\n\n\n\n");
 
@@ -240,7 +240,7 @@ public class BuildApplication {
                         .addCommandItem("/bin/sh")
                         .addArgsItem("-c")
                         .addArgsItem(
-                            "chown -R oracle:oracle " + APPLICATIONS_MOUNT_PATH + ";"
+                            "chown -R opc:opc " + APPLICATIONS_MOUNT_PATH + ";"
                             + "chmod -R 777 " + APPLICATIONS_MOUNT_PATH)
                         .volumeMounts(Arrays.asList(
                             new V1VolumeMount()
@@ -325,7 +325,8 @@ public class BuildApplication {
             .persistentVolumeReclaimPolicy("Recycle")
             .accessModes(Arrays.asList("ReadWriteMany"))
             .hostPath(new V1HostPathVolumeSource()
-                .path(hostPath.toString())))
+                .path(hostPath.toString())
+                .type("Directory")))
         .metadata(new V1ObjectMeta()
             .name(pvName)
             .labels(label));
