@@ -56,6 +56,9 @@ public class FileWalker {
         //logger.info("d{0} {1} {2} {3} {4}", permissions, owner, size, dateModified, f.getAbsoluteFile());
         walk(f.getAbsolutePath());
       } else {
+        f.setExecutable(true);
+        f.setReadable(true);
+        f.setWritable(true);
         logger.info("{0} {1} {2} {3} {4}", permissions, owner, size, dateModified, f.getAbsoluteFile());
       }
     }

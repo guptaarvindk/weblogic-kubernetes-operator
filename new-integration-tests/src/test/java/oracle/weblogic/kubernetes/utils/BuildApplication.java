@@ -265,9 +265,21 @@ public class BuildApplication {
     }
     logger.info("Persistent volume claims");
     logger.info(dump(Kubernetes.listPersistentVolumeClaims(namespace)));
+    for (var pvc : Kubernetes.listPersistentVolumeClaims(namespace).getItems()) {
+      if (pvc.getMetadata().getName().contains("build-pvc-ns")) {
+        logger.info("Deleting {0}", pvc.getMetadata().getName());
+        Kubernetes.deletePvc(pvc.getMetadata().getName(), namespace);
+      }
+    }
 
     logger.info("Persistent volumes");
     logger.info(dump(Kubernetes.listPersistentVolumes()));
+    for (var pv : Kubernetes.listPersistentVolumes().getItems()) {
+      if (pv.getMetadata().getName().contains("build-pv-ns")) {
+        logger.info("Deleting {0}", pv.getMetadata().getName());
+        Kubernetes.deletePv(pv.getMetadata().getName());
+      }
+    }
 
   }
 
