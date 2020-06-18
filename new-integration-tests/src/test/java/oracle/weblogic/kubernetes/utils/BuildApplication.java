@@ -235,7 +235,7 @@ public class BuildApplication {
                 .spec(new V1PodSpec()
                     .initContainers(Arrays.asList(new V1Container()
                         .name("fix-pvc-owner") // change the ownership of the pv to opc:opc
-                        .image(image)
+                        .image("openjdk:11-oracle") //.image(image)
                         .imagePullPolicy("Always")
                         .addCommandItem("/bin/sh")
                         .addArgsItem("-c")
@@ -252,7 +252,7 @@ public class BuildApplication {
                     .restartPolicy("Never")
                     .containers(Arrays.asList(jobContainer
                         .name("build-application-container")
-                        .image(image)
+                        .image("openjdk:11-oracle") //.image(image)
                         .imagePullPolicy("Always")
                         .volumeMounts(Arrays.asList(
                             new V1VolumeMount()
@@ -307,6 +307,9 @@ public class BuildApplication {
 
     logger.info("Persistent volumes");
     logger.info(dump(Kubernetes.listPersistentVolumes()));
+
+    logger.info("Job ");
+    logger.info(dump(Kubernetes.list))
 
   }
 
