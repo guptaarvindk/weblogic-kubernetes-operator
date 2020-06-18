@@ -48,9 +48,6 @@ public class FileWalker {
 
     for (File f : list) {
       Path path = Paths.get(f.getAbsolutePath());
-      f.setExecutable(true);
-      f.setReadable(true);
-      f.setWritable(true);
       PosixFileAttributes attrs = Files.readAttributes(path, PosixFileAttributes.class);
       String permissions = PosixFilePermissions.toString(attrs.permissions());
       String owner = attrs.owner() + " " + attrs.group();
@@ -60,9 +57,6 @@ public class FileWalker {
         //logger.info("d{0} {1} {2} {3} {4}", permissions, owner, size, dateModified, f.getAbsoluteFile());
         walk(f.getAbsolutePath());
       } else {
-        f.setExecutable(true);
-        f.setReadable(true);
-        f.setWritable(true);
         logger.info("{0} {1} {2} {3} {4}", permissions, owner, size, dateModified, f.getAbsoluteFile());
       }
     }

@@ -135,6 +135,11 @@ public class BuildApplication {
 
     // build application
     build(parameters, targets, pvName, pvcName, namespace);
+    try {
+      FileWalker.walk(Paths.get(PV_ROOT, "j2eeapplications").toString());
+    } catch (IOException ex) {
+      logger.severe(ex.getMessage());
+    }
     fail("Failing test ");
   }
 
