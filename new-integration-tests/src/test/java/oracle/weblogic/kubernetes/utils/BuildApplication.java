@@ -155,7 +155,6 @@ public class BuildApplication {
         .addCommandItem("/bin/sh")
         .addArgsItem("-c")
         .addArgsItem("ls -l /;"
-            + "ls -l /shared;"
             + "ls -l " + APPLICATIONS_MOUNT_PATH + ";"
             + " touch " + APPLICATIONS_MOUNT_PATH + "/tempfile.txt;"
             + "ls -l " + APPLICATIONS_MOUNT_PATH);
@@ -214,6 +213,7 @@ public class BuildApplication {
                     .initContainers(Arrays.asList(new V1Container()
                         .name("fix-pvc-owner") // change the ownership of the pv to opc:opc
                         .image(image)
+                        .imagePullPolicy("Always")
                         .addCommandItem("/bin/sh")
                         .addArgsItem("-c")
                         .addArgsItem(
@@ -230,7 +230,7 @@ public class BuildApplication {
                     .containers(Arrays.asList(jobContainer
                         .name("build-application-container")
                         .image(image)
-                        .imagePullPolicy("IfNotPresent")
+                        .imagePullPolicy("Always")
                         .volumeMounts(Arrays.asList(
                             new V1VolumeMount()
                                 .name(pvName)
@@ -281,21 +281,9 @@ public class BuildApplication {
     }
     logger.info("Persistent volume claims");
     logger.info(dump(Kubernetes.listPersistentVolumeClaims(namespace)));
-    for (var pvc : Kubernetes.listPersistentVolumeClaims(namespace).getItems()) {
-      if (pvc.getMetadata().getName().contains("build-pvc-ns")) {
-        logger.info("Deleting {0}", pvc.getMetadata().getName());
-        Kubernetes.deletePvc(pvc.getMetadata().getName(), namespace);
-      }
-    }
 
     logger.info("Persistent volumes");
     logger.info(dump(Kubernetes.listPersistentVolumes()));
-    for (var pv : Kubernetes.listPersistentVolumes().getItems()) {
-      if (pv.getMetadata().getName().contains("build-pv-ns")) {
-        logger.info("Deleting {0}", pv.getMetadata().getName());
-        Kubernetes.deletePv(pv.getMetadata().getName());
-      }
-    }
 
   }
 
