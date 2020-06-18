@@ -153,7 +153,9 @@ public class BuildApplication {
     V1Container jobCreationContainer = new V1Container()
         .addCommandItem("/bin/sh")
         .addArgsItem("-c")
-        .addArgsItem("ls -l /; ls -l " + APPLICATIONS_MOUNT_PATH);
+        .addArgsItem("ls -l /;"
+            + " touch " + APPLICATIONS_MOUNT_PATH + "/tempfile.txt;"
+            + "ls -l " + APPLICATIONS_MOUNT_PATH);
 
     // add ant properties to env
     if (parameters != null) {
