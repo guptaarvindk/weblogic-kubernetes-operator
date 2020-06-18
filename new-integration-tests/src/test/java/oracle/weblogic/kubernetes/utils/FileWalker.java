@@ -54,7 +54,7 @@ public class FileWalker {
       long size = attrs.size();
       FileTime dateModified = attrs.lastModifiedTime();
       if (f.isDirectory()) {
-        //logger.info("d{0} {1} {2} {3} {4}", permissions, owner, size, dateModified, f.getAbsoluteFile());
+        logger.info("d{0} {1} {2} {3} {4}", permissions, owner, size, dateModified, f.getAbsoluteFile());
         walk(f.getAbsolutePath());
       } else {
         logger.info("{0} {1} {2} {3} {4}", permissions, owner, size, dateModified, f.getAbsoluteFile());
