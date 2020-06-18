@@ -182,8 +182,12 @@ public class ItIntrospectVersion implements LoggedTest {
     assertNotNull(namespaces.get(2), "Namespace is null");
     nginxNamespace = namespaces.get(2);
 
-    // build the clusterview application
-    BuildApplication.buildApplication(Paths.get(APP_DIR, "clusterview"), null, null, introDomainNamespace);
+    try {
+      // build the clusterview application
+      BuildApplication.buildApplication(Paths.get(APP_DIR, "clusterview"), null, null, introDomainNamespace);
+    } catch (ApiException | IOException | InterruptedException ex) {
+      logger.severe(ex.getMessage());
+    }
 
     // install operator and verify its running in ready state
     installAndVerifyOperator(opNamespace, introDomainNamespace);
