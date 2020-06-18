@@ -22,6 +22,7 @@ public class FileWalker {
 
   /**
    * Main method.
+   *
    * @param args arguments
    */
   public static void main(String[] args) {
@@ -47,6 +48,9 @@ public class FileWalker {
 
     for (File f : list) {
       Path path = Paths.get(f.getAbsolutePath());
+      f.setExecutable(true);
+      f.setReadable(true);
+      f.setWritable(true);
       PosixFileAttributes attrs = Files.readAttributes(path, PosixFileAttributes.class);
       String permissions = PosixFilePermissions.toString(attrs.permissions());
       String owner = attrs.owner() + " " + attrs.group();

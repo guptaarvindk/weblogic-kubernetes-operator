@@ -33,6 +33,7 @@ import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
 import io.kubernetes.client.openapi.models.V1ResourceRequirements;
 import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1SecretList;
+import io.kubernetes.client.openapi.models.V1SecurityContext;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
 import oracle.weblogic.kubernetes.TestConstants;
@@ -76,7 +77,7 @@ public class BuildApplication {
 
   private static String image;
   private static boolean isUseSecret;
-  private static final String APPLICATIONS_MOUNT_PATH = "/shared/j2eeapplication";
+  private static final String APPLICATIONS_MOUNT_PATH = "/application";
   private static final String BUILD_SCRIPT = "build_application.sh";
   private static final Path BUILD_SCRIPT_SOURCE_PATH = Paths.get(RESOURCE_DIR, "bash-scripts", BUILD_SCRIPT);
 
@@ -207,9 +208,24 @@ public class BuildApplication {
                 .name(name)
                 .namespace(namespace))
         .spec(new V1JobSpec()
-            .backoffLimit(0) // try only once
+            .backoffLimit(3) // try only once
             .template(new V1PodTemplateSpec()
                 .spec(new V1PodSpec()
+                    .initContainers(Arrays.asList(new V1Container()
+                        .name("fix-pvc-owner") // change the ownership of the pv to opc:opc
+                        .image(image)
+                        .addCommandItem("/bin/sh")
+                        .addArgsItem("-c")
+                        .addArgsItem(
+                            "chown -R oracle:oracle " + APPLICATIONS_MOUNT_PATH + ";"
+                            + "chmod -R 777 " + APPLICATIONS_MOUNT_PATH)
+                        .volumeMounts(Arrays.asList(
+                            new V1VolumeMount()
+                                .name(pvName)
+                                .mountPath(APPLICATIONS_MOUNT_PATH)))
+                        .securityContext(new V1SecurityContext()
+                            .runAsGroup(0L)
+                            .runAsUser(0L))))
                     .restartPolicy("Never")
                     .containers(Arrays.asList(jobContainer
                         .name("build-application-container")
