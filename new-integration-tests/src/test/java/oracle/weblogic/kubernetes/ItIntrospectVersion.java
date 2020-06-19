@@ -159,7 +159,7 @@ public class ItIntrospectVersion implements LoggedTest {
           .and().with().pollInterval(10, SECONDS)
           .atMost(5, MINUTES).await();
 
-  private static final Path CLUSTERVIEW_APP_PATH = Paths.get(PV_ROOT,
+  private static Path clusterViewAppPath = Paths.get(PV_ROOT,
       "applications", "clusterview", "dist", "clusterview.war");
 
   /**
@@ -182,19 +182,12 @@ public class ItIntrospectVersion implements LoggedTest {
     assertNotNull(namespaces.get(2), "Namespace is null");
     nginxNamespace = namespaces.get(2);
 
-    try {
-      // build the clusterview application
-      String targets = "build";
-      HashMap<String,String> props = new HashMap<>();
-      props.put("verbose", "true");
-      props.put("key", "value");
-      Path distDir = BuildApplication.buildApplication(Paths.get(APP_DIR, "clusterview"), props, targets,
-          "/dist", introDomainNamespace);
-      assertTrue(distDir.toFile().exists());
-      Thread.sleep(10 * 60 * 1000);
-    } catch (ApiException | IOException | InterruptedException ex) {
-      logger.severe(ex.getMessage());
-    }
+
+    // build the clusterview application
+    Path distDir = BuildApplication.buildApplication(Paths.get(APP_DIR, "clusterview"), null, null,
+        "dist", introDomainNamespace);
+    assertTrue(Paths.get(distDir.toString(), "u01/application/dist/clusterview.war").toFile().exists());
+    clusterViewAppPath = Paths.get(distDir.toString(), "u01/application/dist/clusterview.war");
 
     // install operator and verify its running in ready state
     installAndVerifyOperator(opNamespace, introDomainNamespace);
@@ -489,9 +482,9 @@ public class ItIntrospectVersion implements LoggedTest {
 
     //deploy clusterview application
     logger.info("Deploying clusterview app {0} to cluster {1}",
-        CLUSTERVIEW_APP_PATH, clusterName);
+        clusterViewAppPath, clusterName);
     deployUsingWlst(K8S_NODEPORT_HOST, Integer.toString(t3channelNodePort),
-        ADMIN_USERNAME_DEFAULT, ADMIN_PASSWORD_DEFAULT, clusterName, CLUSTERVIEW_APP_PATH,
+        ADMIN_USERNAME_DEFAULT, ADMIN_PASSWORD_DEFAULT, clusterName, clusterViewAppPath,
         introDomainNamespace);
 
     //access application in managed servers through NGINX load balancer

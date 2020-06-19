@@ -3,18 +3,11 @@
 
 package oracle.weblogic.kubernetes.utils;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.models.V1Container;
@@ -47,6 +40,7 @@ import static oracle.weblogic.kubernetes.extensions.LoggedTest.logger;
 import static org.apache.commons.io.FileUtils.copyDirectory;
 import static org.apache.commons.io.FileUtils.deleteDirectory;
 import static org.awaitility.Awaitility.with;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 /**
  * Utility class to build application.
@@ -68,108 +62,81 @@ public class BuildApplication {
    * @param archiveDistDir location of the archive built inside source directory
    * @param namespace name of the namespace to use for pvc
    * @return Path path of the archive built
-   * @throws ApiException when Kubernetes cluster interaction fails
-   * @throws IOException when zipping file fails
-   * @throws InterruptedException when executing command fails
    */
   public static Path buildApplication(Path appSrcPath, Map<String, String> antParams,
-      String antTargets, String archiveDistDir, String namespace)
-      throws ApiException, IOException, InterruptedException {
+      String antTargets, String archiveDistDir, String namespace) {
 
     setImage(namespace);
 
     // Path of temp location for application source directory
     Path tempAppPath = Paths.get(WORK_DIR, "j2eeapplications", appSrcPath.getFileName().toString());
+    // directory to copy archives built
+    Path destArchiveDir = Paths.get(WORK_DIR, appSrcPath.getFileName().toString());
 
-    // recreate WORK_DIR/j2eeapplications/<application_directory_name>
-    logger.info("Deleting and recreating {0}", tempAppPath);
-    Files.createDirectories(tempAppPath);
-    deleteDirectory(tempAppPath.toFile());
-    Files.createDirectories(tempAppPath);
+    assertDoesNotThrow(() -> {
+      // recreate WORK_DIR/j2eeapplications/<application_directory_name>
+      logger.info("Deleting and recreating {0}", tempAppPath);
 
-    // copy the application source to WORK_DIR/j2eeapplications/<application_directory_name>
-    logger.info("Copying {0} to {1}", appSrcPath, tempAppPath);
-    copyDirectory(appSrcPath.toFile(), tempAppPath.toFile());
+      Files.createDirectories(tempAppPath);
+      deleteDirectory(tempAppPath.toFile());
+      Files.createDirectories(tempAppPath);
+
+      // copy the application source to WORK_DIR/j2eeapplications/<application_directory_name>
+      logger.info("Copying {0} to {1}", appSrcPath, tempAppPath);
+      copyDirectory(appSrcPath.toFile(), tempAppPath.toFile());
+    });
 
     // zip up the application source to be copied to pod for building
-    Path zipFile = Paths.get(createZipFile(tempAppPath));
+    Path zipFile = Paths.get(FileUtils.createZipFile(tempAppPath));
 
-    // add ant properties to env
-    V1Container buildContainer = new V1Container();
 
-    // set ZIP_FILE location in env variable
-    buildContainer.addEnvItem(new V1EnvVar()
-        .name("ZIP_FILE")
-        .value(zipFile.getFileName().toString()));
+    assertDoesNotThrow(() -> {
+      // add ant properties to env
+      V1Container buildContainer = new V1Container();
 
-    // set ant parameteres in env variable sysprops
-    if (antParams != null) {
-      StringBuilder params = new StringBuilder();
-      antParams.entrySet().forEach((parameter) -> {
-        params.append("-D").append(parameter.getKey()).append("=").append(parameter.getValue()).append(" ");
-      });
-      buildContainer = buildContainer
-          .addEnvItem(new V1EnvVar().name("sysprops").value(params.toString()));
-    }
+      // set ZIP_FILE location in env variable
+      buildContainer.addEnvItem(new V1EnvVar()
+          .name("ZIP_FILE")
+          .value(zipFile.getFileName().toString()));
 
-    // set add targets in env variable targets
-    if (antTargets != null) {
-      buildContainer = buildContainer
-          .addEnvItem(new V1EnvVar().name("targets").value(antTargets));
-    }
+      // set ant parameteres in env variable sysprops
+      if (antParams != null) {
+        StringBuilder params = new StringBuilder();
+        antParams.entrySet().forEach((parameter) -> {
+          params.append("-D").append(parameter.getKey()).append("=").append(parameter.getValue()).append(" ");
+        });
+        buildContainer = buildContainer
+            .addEnvItem(new V1EnvVar().name("sysprops").value(params.toString()));
+      }
 
-    //setup temporary WebLogic to build application
-    V1Pod webLogicPod = setupWebLogicPod(namespace, buildContainer);
+      // set add targets in env variable targets
+      if (antTargets != null) {
+        buildContainer = buildContainer
+            .addEnvItem(new V1EnvVar().name("targets").value(antTargets));
+      }
 
-    //copy the zip file to /u01 location inside pod
-    Kubernetes.copyFileToPod(namespace, webLogicPod.getMetadata().getName(),
-        null, zipFile, Paths.get("/u01", zipFile.getFileName().toString()));
-    //copy the build script to /u01 location inside pod
-    Kubernetes.copyFileToPod(namespace, webLogicPod.getMetadata().getName(),
-        null, BUILD_SCRIPT_SOURCE_PATH, Paths.get("/u01", BUILD_SCRIPT));
+      //setup temporary WebLogic to build application
+      V1Pod webLogicPod = setupWebLogicPod(namespace, buildContainer);
 
-    Kubernetes.exec(webLogicPod, new String[]{"/bin/sh", "/u01/" + BUILD_SCRIPT});
+      //copy the zip file to /u01 location inside pod
+      Kubernetes.copyFileToPod(namespace, webLogicPod.getMetadata().getName(),
+          null, zipFile, Paths.get("/u01", zipFile.getFileName().toString()));
+      //copy the build script to /u01 location inside pod
+      Kubernetes.copyFileToPod(namespace, webLogicPod.getMetadata().getName(),
+          null, BUILD_SCRIPT_SOURCE_PATH, Paths.get("/u01", BUILD_SCRIPT));
 
-    Path destArchiveDir = Files.createDirectories(Paths.get(WORK_DIR, appSrcPath.getFileName().toString()));
+      Kubernetes.exec(webLogicPod, new String[]{"/bin/sh", "/u01/" + BUILD_SCRIPT});
 
-    Kubernetes.copyDirectoryFromPod(webLogicPod,
-        Paths.get(APPLICATIONS_PATH, archiveDistDir).toString(), destArchiveDir);
+      Files.createDirectories(destArchiveDir);
+
+      Kubernetes.copyDirectoryFromPod(webLogicPod,
+          Paths.get(APPLICATIONS_PATH, archiveDistDir).toString(), destArchiveDir);
+    });
 
     return destArchiveDir;
   }
 
-  /**
-   * Create a zip file from a folder.
-   *
-   * @param dirPath folder to zip
-   * @return path of the zipfile
-   */
-  public static String createZipFile(Path dirPath) {
-    String zipFileName = dirPath.toString().concat(".zip");
-    try {
-      final ZipOutputStream outputStream = new ZipOutputStream(new FileOutputStream(zipFileName));
-      Files.walkFileTree(dirPath, new SimpleFileVisitor<Path>() {
-        @Override
-        public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
-          try {
-            Path targetFile = dirPath.relativize(file);
-            outputStream.putNextEntry(new ZipEntry(Paths.get(targetFile.toString()).toString()));
-            byte[] bytes = Files.readAllBytes(file);
-            outputStream.write(bytes, 0, bytes.length);
-            outputStream.closeEntry();
-          } catch (IOException e) {
-            e.printStackTrace();
-          }
-          return FileVisitResult.CONTINUE;
-        }
-      });
-      outputStream.close();
-    } catch (IOException e) {
-      e.printStackTrace();
-      return null;
-    }
-    return zipFileName;
-  }
+
 
   /**
    * Create a temporary WebLogic pod to build j2ee applications.
