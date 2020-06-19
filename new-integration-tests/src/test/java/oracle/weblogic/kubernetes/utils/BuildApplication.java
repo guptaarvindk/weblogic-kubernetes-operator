@@ -128,6 +128,8 @@ public class BuildApplication {
       Kubernetes.exec(webLogicPod, new String[]{"/bin/sh", "/u01/" + BUILD_SCRIPT});
 
       Files.createDirectories(destArchiveDir);
+      deleteDirectory(destArchiveDir.toFile());
+      Files.createDirectories(destArchiveDir);
 
       Kubernetes.copyDirectoryFromPod(webLogicPod,
           Paths.get(APPLICATIONS_PATH, archiveDistDir).toString(), destArchiveDir);
