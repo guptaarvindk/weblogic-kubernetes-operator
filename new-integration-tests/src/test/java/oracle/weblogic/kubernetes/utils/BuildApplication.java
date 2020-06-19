@@ -12,33 +12,20 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import io.kubernetes.client.custom.Quantity;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.models.V1Container;
 import io.kubernetes.client.openapi.models.V1EnvVar;
-import io.kubernetes.client.openapi.models.V1HostPathVolumeSource;
 import io.kubernetes.client.openapi.models.V1LocalObjectReference;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
-import io.kubernetes.client.openapi.models.V1PersistentVolume;
-import io.kubernetes.client.openapi.models.V1PersistentVolumeClaim;
-import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimSpec;
-import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimVolumeSource;
-import io.kubernetes.client.openapi.models.V1PersistentVolumeSpec;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodSpec;
-import io.kubernetes.client.openapi.models.V1ResourceRequirements;
 import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1SecretList;
-import io.kubernetes.client.openapi.models.V1SecurityContext;
-import io.kubernetes.client.openapi.models.V1Volume;
-import io.kubernetes.client.openapi.models.V1VolumeMount;
 import oracle.weblogic.kubernetes.TestConstants;
-import oracle.weblogic.kubernetes.actions.impl.Namespace;
 import oracle.weblogic.kubernetes.actions.impl.primitive.Kubernetes;
 import org.awaitility.core.ConditionFactory;
 
@@ -50,21 +37,16 @@ import static oracle.weblogic.kubernetes.TestConstants.OCR_PASSWORD;
 import static oracle.weblogic.kubernetes.TestConstants.OCR_REGISTRY;
 import static oracle.weblogic.kubernetes.TestConstants.OCR_SECRET_NAME;
 import static oracle.weblogic.kubernetes.TestConstants.OCR_USERNAME;
-import static oracle.weblogic.kubernetes.TestConstants.PV_ROOT;
 import static oracle.weblogic.kubernetes.actions.ActionConstants.RESOURCE_DIR;
 import static oracle.weblogic.kubernetes.actions.ActionConstants.WLS_BASE_IMAGE_NAME;
 import static oracle.weblogic.kubernetes.actions.ActionConstants.WLS_BASE_IMAGE_TAG;
 import static oracle.weblogic.kubernetes.actions.ActionConstants.WORK_DIR;
-import static oracle.weblogic.kubernetes.actions.TestActions.createPersistentVolume;
-import static oracle.weblogic.kubernetes.actions.TestActions.createPersistentVolumeClaim;
 import static oracle.weblogic.kubernetes.actions.impl.primitive.Kubernetes.listSecrets;
 import static oracle.weblogic.kubernetes.assertions.TestAssertions.podReady;
 import static oracle.weblogic.kubernetes.extensions.LoggedTest.logger;
 import static org.apache.commons.io.FileUtils.copyDirectory;
 import static org.apache.commons.io.FileUtils.deleteDirectory;
 import static org.awaitility.Awaitility.with;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Utility class to build application.
@@ -73,7 +55,7 @@ public class BuildApplication {
 
   private static String image;
   private static boolean isUseSecret;
-  private static final String APPLICATIONS_MOUNT_PATH = "/application";
+  private static final String APPLICATIONS_PATH = "/u01/application";
   private static final String BUILD_SCRIPT = "build_application.sh";
   private static final Path BUILD_SCRIPT_SOURCE_PATH = Paths.get(RESOURCE_DIR, "bash-scripts", BUILD_SCRIPT);
 
@@ -112,18 +94,15 @@ public class BuildApplication {
     // zip up the application source to be copied to pod for building
     Path zipFile = Paths.get(createZipFile(tempAppPath));
 
-    // create the persistent volume to make the application archive accessible to pod
-    String uniqueName = Namespace.uniqueName();
-    String pvName = namespace + "-build-pv-" + uniqueName;
-    String pvcName = namespace + "-build-pvc-" + uniqueName;
-
-    Path pvHostPath = Paths.get(PV_ROOT, "j2eeapplications", appSrcPath.getFileName().toString());
-    createPV(pvHostPath, pvName);
-    createPVC(pvName, pvcName, namespace);
-
     // add ant properties to env
     V1Container buildContainer = new V1Container();
-    buildContainer.addEnvItem(new V1EnvVar().name("ZIP_FILE").value(zipFile.getFileName().toString()));
+
+    // set ZIP_FILE location in env variable
+    buildContainer.addEnvItem(new V1EnvVar()
+        .name("ZIP_FILE")
+        .value(zipFile.getFileName().toString()));
+
+    // set ant parameteres in env variable sysprops
     if (antParams != null) {
       StringBuilder params = new StringBuilder();
       antParams.entrySet().forEach((parameter) -> {
@@ -133,92 +112,107 @@ public class BuildApplication {
           .addEnvItem(new V1EnvVar().name("sysprops").value(params.toString()));
     }
 
-    // add targets in env
+    // set add targets in env variable targets
     if (antTargets != null) {
       buildContainer = buildContainer
           .addEnvItem(new V1EnvVar().name("targets").value(antTargets));
     }
 
-    V1Pod webLogicPod = setupWebLogicPod(namespace, pvcName, pvName, buildContainer);
-    Kubernetes.copyFileToPod(namespace, webLogicPod.getMetadata().getName(),
-        null, zipFile, Paths.get(APPLICATIONS_MOUNT_PATH, zipFile.getFileName().toString()));
-    Kubernetes.copyFileToPod(namespace, webLogicPod.getMetadata().getName(),
-        null, BUILD_SCRIPT_SOURCE_PATH, Paths.get(APPLICATIONS_MOUNT_PATH,
-            BUILD_SCRIPT_SOURCE_PATH.getFileName().toString()));
+    //setup temporary WebLogic to build application
+    V1Pod webLogicPod = setupWebLogicPod(namespace, buildContainer);
 
-    Kubernetes.exec(webLogicPod, new String[]{"/bin/sh", "/application/" + BUILD_SCRIPT});
+    //copy the zip file to /u01 location inside pod
+    Kubernetes.copyFileToPod(namespace, webLogicPod.getMetadata().getName(),
+        null, zipFile, Paths.get("/u01", zipFile.getFileName().toString()));
+    //copy the build script to /u01 location inside pod
+    Kubernetes.copyFileToPod(namespace, webLogicPod.getMetadata().getName(),
+        null, BUILD_SCRIPT_SOURCE_PATH, Paths.get("/u01", BUILD_SCRIPT));
+
+    Kubernetes.exec(webLogicPod, new String[]{"/bin/sh", "/u01/" + BUILD_SCRIPT});
 
     Path destArchiveDir = Files.createDirectories(Paths.get(WORK_DIR, appSrcPath.getFileName().toString()));
 
     Kubernetes.copyDirectoryFromPod(webLogicPod,
-        Paths.get(APPLICATIONS_MOUNT_PATH, archiveDistDir).toString(), destArchiveDir);
+        Paths.get(APPLICATIONS_PATH, archiveDistDir).toString(), destArchiveDir);
 
-    //Kubernetes.copyFileFromPod(namespace, webLogicPod.getMetadata().getName(),
-    //null, Paths.get(APPLICATIONS_MOUNT_PATH, archiveDistDir), Paths.get(WORK_DIR, archiveDistDir));
     return destArchiveDir;
-
-
-    /*
-    ExecResult exec = Exec.exec(webLogicPod, null, true,
-        "sh -c ls /;"
-        + "ls /application;"
-        + "cd " + APPLICATIONS_MOUNT_PATH + ";",
-        "unzip " + zipFile.getFileName() + ";",
-        "cd " + application.getFileName() + ";",
-        "sh " + BUILD_SCRIPT + ";");
-    logger.info(exec.stdout());
-    logger.severe(exec.stderr());
-    assertEquals(0, exec.exitValue(), "Build application failed");
-     */
   }
 
-  private static void createPV(Path hostPath, String pvName) {
-    logger.info("creating persistent volume");
-    // a dummy label is added so that cleanup can delete all pvs
-    HashMap<String, String> label = new HashMap<String, String>();
-    label.put("weblogic.domainUid", "buildjobs");
-
-    V1PersistentVolume v1pv = new V1PersistentVolume()
-        .spec(new V1PersistentVolumeSpec()
-            .addAccessModesItem("ReadWriteMany")
-            .storageClassName("weblogic-build-storage-class")
-            .volumeMode("Filesystem")
-            .putCapacityItem("storage", Quantity.fromString("2Gi"))
-            .persistentVolumeReclaimPolicy("Recycle")
-            .accessModes(Arrays.asList("ReadWriteMany"))
-            .hostPath(new V1HostPathVolumeSource()
-                .path(hostPath.toString())
-                .type("DirectoryOrCreate")))
-        .metadata(new V1ObjectMeta()
-            .name(pvName)
-            .labels(label));
-
-    boolean success = assertDoesNotThrow(() -> createPersistentVolume(v1pv),
-        "Failed to create persistent volume");
-    assertTrue(success, "PersistentVolume creation failed");
+  /**
+   * Create a zip file from a folder.
+   *
+   * @param dirPath folder to zip
+   * @return path of the zipfile
+   */
+  public static String createZipFile(Path dirPath) {
+    String zipFileName = dirPath.toString().concat(".zip");
+    try {
+      final ZipOutputStream outputStream = new ZipOutputStream(new FileOutputStream(zipFileName));
+      Files.walkFileTree(dirPath, new SimpleFileVisitor<Path>() {
+        @Override
+        public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
+          try {
+            Path targetFile = dirPath.relativize(file);
+            outputStream.putNextEntry(new ZipEntry(Paths.get(targetFile.toString()).toString()));
+            byte[] bytes = Files.readAllBytes(file);
+            outputStream.write(bytes, 0, bytes.length);
+            outputStream.closeEntry();
+          } catch (IOException e) {
+            e.printStackTrace();
+          }
+          return FileVisitResult.CONTINUE;
+        }
+      });
+      outputStream.close();
+    } catch (IOException e) {
+      e.printStackTrace();
+      return null;
+    }
+    return zipFileName;
   }
 
-  private static void createPVC(String pvName, String pvcName, String namespace) {
-    logger.info("creating persistent volume claim");
-    // a dummy label is added so that cleanup can delete all pvs
-    HashMap<String, String> label = new HashMap<String, String>();
-    label.put("weblogic.domainUid", "buildjobs");
+  /**
+   * Create a temporary WebLogic pod to build j2ee applications.
+   *
+   * @param namespace name of the namespace in which to create the temporary pod
+   * @return V1Pod created pod object
+   * @throws ApiException when create pod fails
+   */
+  private static V1Pod setupWebLogicPod(String namespace, V1Container container) throws ApiException {
 
-    V1PersistentVolumeClaim v1pvc = new V1PersistentVolumeClaim()
-        .spec(new V1PersistentVolumeClaimSpec()
-            .addAccessModesItem("ReadWriteMany")
-            .storageClassName("weblogic-build-storage-class")
-            .volumeName(pvName)
-            .resources(new V1ResourceRequirements()
-                .putRequestsItem("storage", Quantity.fromString("2Gi"))))
-        .metadata(new V1ObjectMeta()
-            .name(pvcName)
-            .namespace(namespace)
-            .labels(label));
+    ConditionFactory withStandardRetryPolicy = with().pollDelay(10, SECONDS)
+        .and().with().pollInterval(2, SECONDS)
+        .atMost(3, MINUTES).await();
 
-    boolean success = assertDoesNotThrow(() -> createPersistentVolumeClaim(v1pvc),
-        "Failed to create persistent volume claim");
-    assertTrue(success, "PersistentVolumeClaim creation failed");
+    final String podName = "weblogic-build-pod-" + namespace;
+    V1Pod podBody = new V1Pod()
+        .spec(new V1PodSpec()
+            .containers(Arrays.asList(container
+                .name("weblogic-container")
+                .image(image)
+                .imagePullPolicy("IfNotPresent")
+                .addCommandItem("sleep")
+                .addArgsItem("600")))
+            .imagePullSecrets(isUseSecret
+                ? Arrays.asList(new V1LocalObjectReference()
+                    .name(OCR_SECRET_NAME))
+                : null)) // the persistent volume claim used by the test
+        .metadata(new V1ObjectMeta().name(podName))
+        .apiVersion("v1")
+        .kind("Pod");
+    V1Pod wlsPod = Kubernetes.createPod(namespace, podBody);
+
+    withStandardRetryPolicy
+        .conditionEvaluationListener(
+            condition -> logger.info("Waiting for {0} to be ready in namespace {1}, "
+                + "(elapsed time {2} , remaining time {3}",
+                podName,
+                namespace,
+                condition.getElapsedTimeInMS(),
+                condition.getRemainingTimeInMS()))
+        .until(podReady(podName, null, namespace));
+
+    return wlsPod;
   }
 
   /**
@@ -253,109 +247,6 @@ public class BuildApplication {
       isUseSecret = true;
     }
     logger.info("Using image {0}", image);
-  }
-
-  /**
-   * Create a zip file from a folder.
-   *
-   * @param dirPath folder to zip
-   * @return path of the zipfile
-   */
-  public static String createZipFile(Path dirPath) {
-    String dirName = dirPath.getFileName().toString();
-    String zipFileName = dirPath.toString().concat(".zip");
-    try {
-      final ZipOutputStream outputStream = new ZipOutputStream(new FileOutputStream(zipFileName));
-      Files.walkFileTree(dirPath, new SimpleFileVisitor<Path>() {
-        @Override
-        public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
-          try {
-            Path targetFile = dirPath.relativize(file);
-            outputStream.putNextEntry(new ZipEntry(Paths.get(targetFile.toString()).toString()));
-            byte[] bytes = Files.readAllBytes(file);
-            outputStream.write(bytes, 0, bytes.length);
-            outputStream.closeEntry();
-          } catch (IOException e) {
-            e.printStackTrace();
-          }
-          return FileVisitResult.CONTINUE;
-        }
-      });
-      outputStream.close();
-    } catch (IOException e) {
-      e.printStackTrace();
-      return null;
-    }
-    return zipFileName;
-  }
-
-  /**
-   * Create a temporary WebLogic pod to build j2ee applications.
-   *
-   * @param namespace name of the namespace in which to create the temporary pod
-   * @param pvcName name of the persistent volume claim
-   * @param pvName name of the persistent volume in which the applications need to be built
-   * @return V1Pod created pod object
-   * @throws ApiException when create pod fails
-   */
-  private static V1Pod setupWebLogicPod(String namespace, String pvcName, String pvName,
-      V1Container container) throws ApiException {
-
-    ConditionFactory withStandardRetryPolicy = with().pollDelay(10, SECONDS)
-        .and().with().pollInterval(2, SECONDS)
-        .atMost(3, MINUTES).await();
-
-    final String podName = "weblogic-build-pod-" + namespace;
-    V1Pod podBody = new V1Pod()
-        .spec(new V1PodSpec()
-            .initContainers(Arrays.asList(new V1Container()
-                .name("fix-pvc-owner")
-                .image(image)
-                .imagePullPolicy("IfNotPresent")
-                .addCommandItem("/bin/sh")
-                .addArgsItem("-c")
-                .addArgsItem("chown -R 1000:1000 " + APPLICATIONS_MOUNT_PATH)
-                .securityContext(new V1SecurityContext()
-                    .runAsGroup(0L)
-                    .runAsUser(0L))
-                .volumeMounts(Arrays.asList(new V1VolumeMount()
-                    .name(pvName)
-                    .mountPath(APPLICATIONS_MOUNT_PATH)))))
-            .containers(Arrays.asList(container
-                .name("weblogic-container")
-                .image(image)
-                .imagePullPolicy("IfNotPresent")
-                .volumeMounts(Arrays.asList(
-                    new V1VolumeMount()
-                        .name(pvName) // mount the persistent volume to /shared inside the pod
-                        .mountPath(APPLICATIONS_MOUNT_PATH)))
-                .addCommandItem("sleep")
-                .addArgsItem("600")))
-            .volumes(Arrays.asList(
-                new V1Volume()
-                    .name(pvName) // the persistent volume that needs to be archived
-                    .persistentVolumeClaim(new V1PersistentVolumeClaimVolumeSource()
-                        .claimName(pvcName))))
-            .imagePullSecrets(isUseSecret
-                ? Arrays.asList(new V1LocalObjectReference()
-                    .name(OCR_SECRET_NAME))
-                : null)) // the persistent volume claim used by the test
-        .metadata(new V1ObjectMeta().name(podName))
-        .apiVersion("v1")
-        .kind("Pod");
-    V1Pod wlsPod = Kubernetes.createPod(namespace, podBody);
-
-    withStandardRetryPolicy
-        .conditionEvaluationListener(
-            condition -> logger.info("Waiting for {0} to be ready in namespace {1}, "
-                + "(elapsed time {2} , remaining time {3}",
-                podName,
-                namespace,
-                condition.getElapsedTimeInMS(),
-                condition.getRemainingTimeInMS()))
-        .until(podReady(podName, null, namespace));
-
-    return wlsPod;
   }
 
 }
