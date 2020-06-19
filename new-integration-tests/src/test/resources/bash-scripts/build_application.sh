@@ -27,7 +27,7 @@ echo "Setting up build environment"
 source ${WL_HOME}/server/bin/setWLSEnv.sh
 
 # call ant all to build
-cd /j2eeapplication
+cd /application
 ant ${sysprops} ${targets}
 
 chmod -R 777 *

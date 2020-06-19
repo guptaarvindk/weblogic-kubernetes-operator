@@ -63,6 +63,7 @@ import static org.apache.commons.io.FileUtils.copyDirectory;
 import static org.apache.commons.io.FileUtils.deleteDirectory;
 import static org.awaitility.Awaitility.with;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -128,12 +129,13 @@ public class BuildApplication {
 
     V1Pod webLogicPod = setupWebLogicPod(namespace, pvcName, pvName);
     Kubernetes.copyFileToPod(namespace, webLogicPod.getMetadata().getName(),
-        null, zipFile, Paths.get(APPLICATIONS_MOUNT_PATH));
-    Exec.exec(webLogicPod, null, true,
+        null, zipFile, Paths.get(APPLICATIONS_MOUNT_PATH, zipFile.getFileName().toString()));
+    ExecResult exec = Exec.exec(webLogicPod, null, true,
         "cd " + APPLICATIONS_MOUNT_PATH,
         "unzip " + zipFile.getFileName(),
         "cd " + application.getFileName(),
         "sh " + BUILD_SCRIPT);
+    assertEquals(0, exec.exitValue(), "Build application failed");
   }
 
   private static void createPV(Path hostPath, String pvName) {
