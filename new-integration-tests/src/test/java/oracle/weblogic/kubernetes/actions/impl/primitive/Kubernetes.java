@@ -2176,8 +2176,6 @@ public class Kubernetes implements LoggedTest {
 
       proc.destroy();
       logger.info("Process Exit value: {0}", proc.exitValue());
-      logger.info("Process output: {0}", proc.getOutputStream());
-      logger.info("Process error: {0}", proc.getErrorStream());
     } catch (ApiException apex) {
       logger.severe(apex.getResponseBody());
       throw apex;
