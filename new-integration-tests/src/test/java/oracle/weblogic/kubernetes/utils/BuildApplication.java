@@ -129,11 +129,12 @@ public class BuildApplication {
     V1Pod webLogicPod = setupWebLogicPod(namespace, pvcName, pvName);
     Kubernetes.copyFileToPod(namespace, webLogicPod.getMetadata().getName(),
         null, zipFile, Paths.get(APPLICATIONS_MOUNT_PATH, zipFile.getFileName().toString()));
+    Kubernetes.copyFileToPod(namespace, webLogicPod.getMetadata().getName(),
+        null, BUILD_SCRIPT_SOURCE_PATH, Paths.get(APPLICATIONS_MOUNT_PATH,
+            BUILD_SCRIPT_SOURCE_PATH.getFileName().toString()));
+
     Kubernetes.exec(webLogicPod, new String[]{
-      "sh", "-c", "ls /application;",
-      "cd /application;",
-      "unzip " + zipFile.getFileName() + ";",
-       "ls "});
+        "/bin/sh", "/application/" + BUILD_SCRIPT});
     /*
     ExecResult exec = Exec.exec(webLogicPod, null, true,
         "sh -c ls /;"
