@@ -22,6 +22,7 @@ import com.google.common.io.ByteStreams;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import io.kubernetes.client.Copy;
+import io.kubernetes.client.Exec;
 import io.kubernetes.client.custom.V1Patch;
 import io.kubernetes.client.extended.generic.GenericKubernetesApi;
 import io.kubernetes.client.extended.generic.KubernetesApiResponse;
@@ -2140,6 +2141,47 @@ public class Kubernetes implements LoggedTest {
       throw apex;
     }
     return null;
+  }
+
+  /**
+   * Execute command in a pod.
+   *
+   * @param pod V1Pod
+   * @param command command to execute
+   * @throws ApiException when exec fails
+   * @throws IOException when read fails
+   * @throws java.lang.InterruptedException interrupted
+   */
+  public static void exec(V1Pod pod, String[] command) throws ApiException,
+      IOException, InterruptedException {
+
+    Exec exec = new Exec(apiClient);
+    try {
+      Process proc = exec.exec(pod, command, false);
+      Thread out = new Thread(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            ByteStreams.copy(proc.getInputStream(), System.out);
+          } catch (IOException ex) {
+            ex.printStackTrace();
+          }
+        }
+      });
+      out.start();
+      proc.waitFor();
+
+      // wait for any last output; no need to wait for input thread
+      out.join();
+
+      proc.destroy();
+      logger.info("Process Exit value: {0}", proc.exitValue());
+      logger.info("Process output: {0}", proc.getOutputStream());
+      logger.info("Process error: {0}", proc.getErrorStream());
+    } catch (ApiException apex) {
+      logger.severe(apex.getResponseBody());
+      throw apex;
+    }
   }
 
   // --------------------------- Exec   ---------------------------

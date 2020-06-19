@@ -37,7 +37,6 @@ import io.kubernetes.client.openapi.models.V1SecurityContext;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
 import oracle.weblogic.kubernetes.TestConstants;
-import oracle.weblogic.kubernetes.actions.impl.Exec;
 import oracle.weblogic.kubernetes.actions.impl.Namespace;
 import oracle.weblogic.kubernetes.actions.impl.primitive.Kubernetes;
 import org.awaitility.core.ConditionFactory;
@@ -63,7 +62,6 @@ import static org.apache.commons.io.FileUtils.copyDirectory;
 import static org.apache.commons.io.FileUtils.deleteDirectory;
 import static org.awaitility.Awaitility.with;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -130,14 +128,19 @@ public class BuildApplication {
     V1Pod webLogicPod = setupWebLogicPod(namespace, pvcName, pvName);
     Kubernetes.copyFileToPod(namespace, webLogicPod.getMetadata().getName(),
         null, zipFile, Paths.get(APPLICATIONS_MOUNT_PATH, zipFile.getFileName().toString()));
+    Kubernetes.exec(webLogicPod, new String[]{"sh", "-c", "ls /", "ls /application"});
+    /*
     ExecResult exec = Exec.exec(webLogicPod, null, true,
-        "ls /;"
+        "sh -c ls /;"
         + "ls /application;"
         + "cd " + APPLICATIONS_MOUNT_PATH + ";",
         "unzip " + zipFile.getFileName() + ";",
         "cd " + application.getFileName() + ";",
         "sh " + BUILD_SCRIPT + ";");
+    logger.info(exec.stdout());
+    logger.severe(exec.stderr());
     assertEquals(0, exec.exitValue(), "Build application failed");
+    */
   }
 
   private static void createPV(Path hostPath, String pvName) {
