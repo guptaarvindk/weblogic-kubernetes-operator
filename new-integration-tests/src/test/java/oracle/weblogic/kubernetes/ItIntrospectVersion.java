@@ -184,7 +184,7 @@ public class ItIntrospectVersion implements LoggedTest {
 
     try {
       // build the clusterview application
-      String targets = "all";
+      String targets = "build";
       HashMap<String,String> props = new HashMap<>();
       props.put("verbose", "true");
       props.put("key", "value");
