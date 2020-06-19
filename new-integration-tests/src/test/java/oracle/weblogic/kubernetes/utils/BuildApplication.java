@@ -279,8 +279,8 @@ public class BuildApplication {
                     new V1VolumeMount()
                         .name(pvName) // mount the persistent volume to /shared inside the pod
                         .mountPath(APPLICATIONS_MOUNT_PATH)))
-                .addCommandItem("tailf")
-                .addArgsItem("/dev/null")))
+                .addCommandItem("sleep")
+                .addArgsItem("600")))
             .volumes(Arrays.asList(
                 new V1Volume()
                     .name(pvName) // the persistent volume that needs to be archived
