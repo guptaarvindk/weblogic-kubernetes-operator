@@ -53,6 +53,7 @@ import static oracle.weblogic.kubernetes.TestConstants.PV_ROOT;
 import static oracle.weblogic.kubernetes.actions.ActionConstants.RESOURCE_DIR;
 import static oracle.weblogic.kubernetes.actions.ActionConstants.WLS_BASE_IMAGE_NAME;
 import static oracle.weblogic.kubernetes.actions.ActionConstants.WLS_BASE_IMAGE_TAG;
+import static oracle.weblogic.kubernetes.actions.ActionConstants.WORK_DIR;
 import static oracle.weblogic.kubernetes.actions.TestActions.createPersistentVolume;
 import static oracle.weblogic.kubernetes.actions.TestActions.createPersistentVolumeClaim;
 import static oracle.weblogic.kubernetes.actions.impl.primitive.Kubernetes.listSecrets;
@@ -93,36 +94,36 @@ public class BuildApplication {
 
     // Copy the application source directory to PV_ROOT/j2eeapplications/<application_directory_name>
     // This location is mounted in the build pod under /application
-    Path targetPath = Paths.get(PV_ROOT, "j2eeapplications", application.getFileName().toString());
 
-    assertDoesNotThrow(() -> {
-      // recreate PV_ROOT/j2eeapplications/<application_directory_name>
-      logger.info("Deleting and recreating {0}", targetPath);
-      Files.createDirectories(targetPath);
-      deleteDirectory(targetPath.toFile());
-      Files.createDirectories(targetPath);
+    Path tempAppPath = Paths.get(WORK_DIR, "j2eeapplications", application.getFileName().toString());
 
-      // copy the application source to PV_ROOT/j2eeapplications/<application_directory_name>
-      logger.info("Copying {0} to {1}", application, targetPath);
-      copyDirectory(application.toFile(), targetPath.toFile());
+    // recreate PV_ROOT/j2eeapplications/<application_directory_name>
+    logger.info("Deleting and recreating {0}", tempAppPath);
+    Files.createDirectories(tempAppPath);
+    deleteDirectory(tempAppPath.toFile());
+    Files.createDirectories(tempAppPath);
 
-      // copy the build script to PV_ROOT/j2eeapplications/<application_directory_name>
-      Path targetBuildScript = Paths.get(targetPath.toString(), BUILD_SCRIPT);
-      logger.info("Copying {0} to {1}", BUILD_SCRIPT_SOURCE_PATH, targetBuildScript);
-      Files.copy(BUILD_SCRIPT_SOURCE_PATH, targetBuildScript);
+    // copy the application source to PV_ROOT/j2eeapplications/<application_directory_name>
+    logger.info("Copying {0} to {1}", application, tempAppPath);
+    copyDirectory(application.toFile(), tempAppPath.toFile());
 
-      logger.info("Walk directory after copy {0}", targetPath);
-      FileWalker.walk(targetPath.toString());
-    });
+    // copy the build script to PV_ROOT/j2eeapplications/<application_directory_name>
+    Path targetBuildScript = Paths.get(tempAppPath.toString(), BUILD_SCRIPT);
+    logger.info("Copying {0} to {1}", BUILD_SCRIPT_SOURCE_PATH, targetBuildScript);
+    Files.copy(BUILD_SCRIPT_SOURCE_PATH, targetBuildScript);
 
-    Path zipFile = Paths.get(createZipFile(targetPath));
+    Path zipFile = Paths.get(createZipFile(tempAppPath));
+
+    logger.info("Walk directory after copy {0}", tempAppPath);
+    FileWalker.walk(tempAppPath.toString());
 
     // create the persistent volume to make the application archive accessible to pod
     String uniqueName = Namespace.uniqueName();
     String pvName = namespace + "-build-pv-" + uniqueName;
     String pvcName = namespace + "-build-pvc-" + uniqueName;
 
-    createPV(targetPath, pvName);
+    Path pvPath = Paths.get(PV_ROOT, "j2eeapplications", application.getFileName().toString());
+    createPV(pvPath, pvName);
     createPVC(pvName, pvcName, namespace);
 
     V1Pod webLogicPod = setupWebLogicPod(namespace, pvcName, pvName);
@@ -140,7 +141,7 @@ public class BuildApplication {
     logger.info(exec.stdout());
     logger.severe(exec.stderr());
     assertEquals(0, exec.exitValue(), "Build application failed");
-    */
+     */
   }
 
   private static void createPV(Path hostPath, String pvName) {
