@@ -128,7 +128,7 @@ public class BuildApplication {
     V1Pod webLogicPod = setupWebLogicPod(namespace, pvcName, pvName);
     Kubernetes.copyFileToPod(namespace, webLogicPod.getMetadata().getName(),
         null, zipFile, Paths.get(APPLICATIONS_MOUNT_PATH, zipFile.getFileName().toString()));
-    Kubernetes.exec(webLogicPod, new String[]{"sh", "-c", "ls /", "ls /application"});
+    Kubernetes.exec(webLogicPod, new String[]{"sh", "-c", "ls /application"});
     /*
     ExecResult exec = Exec.exec(webLogicPod, null, true,
         "sh -c ls /;"
