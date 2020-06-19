@@ -184,7 +184,11 @@ public class ItIntrospectVersion implements LoggedTest {
 
     try {
       // build the clusterview application
-      BuildApplication.buildApplication(Paths.get(APP_DIR, "clusterview"), null, null, introDomainNamespace);
+      String targets = "all";
+      HashMap<String,String> props = new HashMap<>();
+      props.put("verbose", "true");
+      props.put("key", "value");
+      BuildApplication.buildApplication(Paths.get(APP_DIR, "clusterview"), props, targets, introDomainNamespace);
     } catch (ApiException | IOException | InterruptedException ex) {
       logger.severe(ex.getMessage());
     }
