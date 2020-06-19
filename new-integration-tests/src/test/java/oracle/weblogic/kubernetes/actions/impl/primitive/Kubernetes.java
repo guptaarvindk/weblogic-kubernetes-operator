@@ -622,6 +622,24 @@ public class Kubernetes implements LoggedTest {
     copy.copyFileToPod(namespace, pod, container, srcPath, destPath);
   }
 
+  /**
+   * Copy a file from Kubernetes pod to local file system.
+   *
+   * @param namespace namespace of the pod
+   * @param pod name of the pod where the file is copied from
+   * @param container name of the container
+   * @param srcPath source file location on pod
+   * @param destPath destination file location on local file system
+   * @throws IOException when copy fails
+   * @throws ApiException when pod interaction fails
+   */
+  public static void copyFileFromPod(
+      String namespace, String pod, String container, Path srcPath, Path destPath)
+      throws IOException, ApiException {
+    Copy copy = new Copy();
+    copy.copyFileFromPod(namespace, pod, container, srcPath.toString(), destPath);
+  }
+
   // --------------------------- namespaces -----------------------------------
   /**
    * Create a Kubernetes namespace.

@@ -83,13 +83,15 @@ public class BuildApplication {
    * @param application path of the application source folder
    * @param parameters system properties for ant
    * @param targets ant targets to call
+   * @param archiveRelPath location of the archive built inside source directory
    * @param namespace name of the namespace to use for pvc
+   * @return Path path of the archive built
    * @throws ApiException when Kubernetes cluster interaction fails
    * @throws IOException when zipping file fails
    * @throws InterruptedException when executing command fails
    */
-  public static void buildApplication(Path application, Map<String, String> parameters,
-      String targets, String namespace) throws ApiException, IOException, InterruptedException {
+  public static Path buildApplication(Path application, Map<String, String> parameters,
+      String targets, String archiveRelPath, String namespace) throws ApiException, IOException, InterruptedException {
 
     setImage(namespace);
 
@@ -149,8 +151,12 @@ public class BuildApplication {
         null, BUILD_SCRIPT_SOURCE_PATH, Paths.get(APPLICATIONS_MOUNT_PATH,
             BUILD_SCRIPT_SOURCE_PATH.getFileName().toString()));
 
-    Kubernetes.exec(webLogicPod, new String[]{
-        "/bin/sh", "/application/" + BUILD_SCRIPT});
+    Kubernetes.exec(webLogicPod, new String[]{"/bin/sh", "/application/" + BUILD_SCRIPT});
+
+    Kubernetes.copyFileFromPod(namespace, webLogicPod.getMetadata().getName(),
+        null, Paths.get(APPLICATIONS_MOUNT_PATH, archiveRelPath), Paths.get(WORK_DIR, archiveRelPath));
+    return Paths.get(WORK_DIR, archiveRelPath);
+
 
     /*
     ExecResult exec = Exec.exec(webLogicPod, null, true,
