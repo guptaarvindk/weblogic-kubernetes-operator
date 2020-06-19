@@ -33,6 +33,7 @@ import io.kubernetes.client.openapi.models.V1PodSpec;
 import io.kubernetes.client.openapi.models.V1ResourceRequirements;
 import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1SecretList;
+import io.kubernetes.client.openapi.models.V1SecurityContext;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
 import oracle.weblogic.kubernetes.TestConstants;
@@ -272,11 +273,15 @@ public class BuildApplication {
     V1Pod podBody = new V1Pod()
         .spec(new V1PodSpec()
             .initContainers(Arrays.asList(new V1Container()
+                .name("fix-pvc-owner")
                 .image(image)
                 .imagePullPolicy("IfNotPresent")
                 .addCommandItem("/bin/sh")
                 .addArgsItem("-c")
                 .addArgsItem("chown -R 1000:1000 " + APPLICATIONS_MOUNT_PATH)
+                .securityContext(new V1SecurityContext()
+                    .runAsGroup(0L)
+                    .runAsUser(0L))
                 .volumeMounts(Arrays.asList(new V1VolumeMount()
                     .name(pvName)
                     .mountPath(APPLICATIONS_MOUNT_PATH)))))
