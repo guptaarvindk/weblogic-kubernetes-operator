@@ -131,7 +131,9 @@ public class BuildApplication {
     Kubernetes.copyFileToPod(namespace, webLogicPod.getMetadata().getName(),
         null, zipFile, Paths.get(APPLICATIONS_MOUNT_PATH, zipFile.getFileName().toString()));
     ExecResult exec = Exec.exec(webLogicPod, null, true,
-        "cd " + APPLICATIONS_MOUNT_PATH,
+        "ls /"
+        + "ls /application"
+        + "cd " + APPLICATIONS_MOUNT_PATH,
         "unzip " + zipFile.getFileName(),
         "cd " + application.getFileName(),
         "sh " + BUILD_SCRIPT);
