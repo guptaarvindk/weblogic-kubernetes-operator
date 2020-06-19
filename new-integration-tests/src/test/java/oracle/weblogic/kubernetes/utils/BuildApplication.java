@@ -24,6 +24,7 @@ import java.util.zip.ZipOutputStream;
 import io.kubernetes.client.custom.Quantity;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.models.V1Container;
+import io.kubernetes.client.openapi.models.V1EnvVar;
 import io.kubernetes.client.openapi.models.V1HostPathVolumeSource;
 import io.kubernetes.client.openapi.models.V1LocalObjectReference;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
@@ -68,6 +69,7 @@ import static org.apache.commons.io.FileUtils.deleteDirectory;
 import static org.awaitility.Awaitility.with;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Utility class to build application.
@@ -98,7 +100,6 @@ public class BuildApplication {
 
     // Copy the application source directory to PV_ROOT/j2eeapplications/<application_directory_name>
     // This location is mounted in the build pod under /application
-
     Path tempAppPath = Paths.get(WORK_DIR, "j2eeapplications", application.getFileName().toString());
 
     // recreate PV_ROOT/j2eeapplications/<application_directory_name>
@@ -112,10 +113,9 @@ public class BuildApplication {
     copyDirectory(application.toFile(), tempAppPath.toFile());
 
     // copy the build script to PV_ROOT/j2eeapplications/<application_directory_name>
-    Path targetBuildScript = Paths.get(tempAppPath.toString(), BUILD_SCRIPT);
-    logger.info("Copying {0} to {1}", BUILD_SCRIPT_SOURCE_PATH, targetBuildScript);
-    Files.copy(BUILD_SCRIPT_SOURCE_PATH, targetBuildScript);
-
+    //Path targetBuildScript = Paths.get(tempAppPath.toString(), BUILD_SCRIPT);
+    //logger.info("Copying {0} to {1}", BUILD_SCRIPT_SOURCE_PATH, targetBuildScript);
+    //Files.copy(BUILD_SCRIPT_SOURCE_PATH, targetBuildScript);
     Path zipFile = Paths.get(createZipFile(tempAppPath));
 
     logger.info("Walk directory after copy {0}", tempAppPath);
@@ -130,13 +130,29 @@ public class BuildApplication {
     createPV(pvHostPath, pvName);
     createPVC(pvName, pvcName, namespace);
 
-    V1Pod webLogicPod = setupWebLogicPod(namespace, pvcName, pvName);
+    // add ant properties to env
+    V1Container buildContainer = new V1Container();
+    if (parameters != null) {
+      StringBuilder params = new StringBuilder();
+      parameters.entrySet().forEach((parameter) -> {
+        params.append("-D").append(parameter.getKey()).append("=").append(parameter.getValue()).append(" ");
+      });
+      buildContainer = buildContainer
+          .addEnvItem(new V1EnvVar().name("sysprops").value(params.toString()));
+    }
+
+    // add targets in env
+    if (targets != null) {
+      buildContainer = buildContainer
+          .addEnvItem(new V1EnvVar().name("targets").value(targets));
+    }
+
+    V1Pod webLogicPod = setupWebLogicPod(namespace, pvcName, pvName, buildContainer);
     Kubernetes.copyFileToPod(namespace, webLogicPod.getMetadata().getName(),
         null, zipFile, Paths.get(APPLICATIONS_MOUNT_PATH, zipFile.getFileName().toString()));
     Kubernetes.copyFileToPod(namespace, webLogicPod.getMetadata().getName(),
         null, BUILD_SCRIPT_SOURCE_PATH, Paths.get(APPLICATIONS_MOUNT_PATH,
             BUILD_SCRIPT_SOURCE_PATH.getFileName().toString()));
-
 
     Kubernetes.exec(webLogicPod, new String[]{
         "/bin/sh", "/application/" + BUILD_SCRIPT});
@@ -283,8 +299,8 @@ public class BuildApplication {
    * @return V1Pod created pod object
    * @throws ApiException when create pod fails
    */
-  private static V1Pod setupWebLogicPod(String namespace, String pvcName, String pvName)
-      throws ApiException {
+  private static V1Pod setupWebLogicPod(String namespace, String pvcName, String pvName,
+      V1Container container) throws ApiException {
 
     ConditionFactory withStandardRetryPolicy = with().pollDelay(10, SECONDS)
         .and().with().pollInterval(2, SECONDS)
@@ -306,7 +322,7 @@ public class BuildApplication {
                 .volumeMounts(Arrays.asList(new V1VolumeMount()
                     .name(pvName)
                     .mountPath(APPLICATIONS_MOUNT_PATH)))))
-            .containers(Arrays.asList(new V1Container()
+            .containers(Arrays.asList(container
                 .name("weblogic-container")
                 .image(image)
                 .imagePullPolicy("IfNotPresent")
@@ -352,6 +368,7 @@ public class BuildApplication {
         Logger.getLogger(BuildApplication.class.getName()).log(Level.SEVERE, null, ex);
       }
     }
+    fail("Filing test");
   }
 
 }
