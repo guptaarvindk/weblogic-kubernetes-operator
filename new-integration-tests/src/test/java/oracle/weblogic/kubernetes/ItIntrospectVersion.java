@@ -188,9 +188,10 @@ public class ItIntrospectVersion implements LoggedTest {
       HashMap<String,String> props = new HashMap<>();
       props.put("verbose", "true");
       props.put("key", "value");
-      Path buildApplication = BuildApplication.buildApplication(Paths.get(APP_DIR, "clusterview"), props, targets,
-          "/dist/clusterview.war", introDomainNamespace);
-      assertTrue(buildApplication.toFile().exists());
+      Path distDir = BuildApplication.buildApplication(Paths.get(APP_DIR, "clusterview"), props, targets,
+          "/dist", introDomainNamespace);
+      assertTrue(distDir.toFile().exists());
+      Thread.sleep(10 * 60 * 1000);
     } catch (ApiException | IOException | InterruptedException ex) {
       logger.severe(ex.getMessage());
     }

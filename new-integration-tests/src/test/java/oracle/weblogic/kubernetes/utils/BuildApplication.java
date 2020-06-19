@@ -80,58 +80,53 @@ public class BuildApplication {
   /**
    * Build application.
    *
-   * @param application path of the application source folder
-   * @param parameters system properties for ant
-   * @param targets ant targets to call
-   * @param archiveRelPath location of the archive built inside source directory
+   * @param appSrcPath path of the application source folder
+   * @param antParams system properties for ant
+   * @param antTargets ant targets to call
+   * @param archiveDistDir location of the archive built inside source directory
    * @param namespace name of the namespace to use for pvc
    * @return Path path of the archive built
    * @throws ApiException when Kubernetes cluster interaction fails
    * @throws IOException when zipping file fails
    * @throws InterruptedException when executing command fails
    */
-  public static Path buildApplication(Path application, Map<String, String> parameters,
-      String targets, String archiveRelPath, String namespace) throws ApiException, IOException, InterruptedException {
+  public static Path buildApplication(Path appSrcPath, Map<String, String> antParams,
+      String antTargets, String archiveDistDir, String namespace)
+      throws ApiException, IOException, InterruptedException {
 
     setImage(namespace);
 
-    // Copy the application source directory to PV_ROOT/j2eeapplications/<application_directory_name>
-    // This location is mounted in the build pod under /application
-    Path tempAppPath = Paths.get(WORK_DIR, "j2eeapplications", application.getFileName().toString());
+    // Path of temp location for application source directory
+    Path tempAppPath = Paths.get(WORK_DIR, "j2eeapplications", appSrcPath.getFileName().toString());
 
-    // recreate PV_ROOT/j2eeapplications/<application_directory_name>
+    // recreate WORK_DIR/j2eeapplications/<application_directory_name>
     logger.info("Deleting and recreating {0}", tempAppPath);
     Files.createDirectories(tempAppPath);
     deleteDirectory(tempAppPath.toFile());
     Files.createDirectories(tempAppPath);
 
-    // copy the application source to PV_ROOT/j2eeapplications/<application_directory_name>
-    logger.info("Copying {0} to {1}", application, tempAppPath);
-    copyDirectory(application.toFile(), tempAppPath.toFile());
+    // copy the application source to WORK_DIR/j2eeapplications/<application_directory_name>
+    logger.info("Copying {0} to {1}", appSrcPath, tempAppPath);
+    copyDirectory(appSrcPath.toFile(), tempAppPath.toFile());
 
-    // copy the build script to PV_ROOT/j2eeapplications/<application_directory_name>
-    //Path targetBuildScript = Paths.get(tempAppPath.toString(), BUILD_SCRIPT);
-    //logger.info("Copying {0} to {1}", BUILD_SCRIPT_SOURCE_PATH, targetBuildScript);
-    //Files.copy(BUILD_SCRIPT_SOURCE_PATH, targetBuildScript);
+    // zip up the application source to be copied to pod for building
     Path zipFile = Paths.get(createZipFile(tempAppPath));
-
-    logger.info("Walk directory after copy {0}", tempAppPath);
-    FileWalker.walk(tempAppPath.toString());
 
     // create the persistent volume to make the application archive accessible to pod
     String uniqueName = Namespace.uniqueName();
     String pvName = namespace + "-build-pv-" + uniqueName;
     String pvcName = namespace + "-build-pvc-" + uniqueName;
 
-    Path pvHostPath = Paths.get(PV_ROOT, "j2eeapplications", application.getFileName().toString());
+    Path pvHostPath = Paths.get(PV_ROOT, "j2eeapplications", appSrcPath.getFileName().toString());
     createPV(pvHostPath, pvName);
     createPVC(pvName, pvcName, namespace);
 
     // add ant properties to env
     V1Container buildContainer = new V1Container();
-    if (parameters != null) {
+    buildContainer.addEnvItem(new V1EnvVar().name("ZIP_FILE").value(zipFile.getFileName().toString()));
+    if (antParams != null) {
       StringBuilder params = new StringBuilder();
-      parameters.entrySet().forEach((parameter) -> {
+      antParams.entrySet().forEach((parameter) -> {
         params.append("-D").append(parameter.getKey()).append("=").append(parameter.getValue()).append(" ");
       });
       buildContainer = buildContainer
@@ -139,9 +134,9 @@ public class BuildApplication {
     }
 
     // add targets in env
-    if (targets != null) {
+    if (antTargets != null) {
       buildContainer = buildContainer
-          .addEnvItem(new V1EnvVar().name("targets").value(targets));
+          .addEnvItem(new V1EnvVar().name("targets").value(antTargets));
     }
 
     V1Pod webLogicPod = setupWebLogicPod(namespace, pvcName, pvName, buildContainer);
@@ -153,9 +148,14 @@ public class BuildApplication {
 
     Kubernetes.exec(webLogicPod, new String[]{"/bin/sh", "/application/" + BUILD_SCRIPT});
 
-    Kubernetes.copyFileFromPod(namespace, webLogicPod.getMetadata().getName(),
-        null, Paths.get(APPLICATIONS_MOUNT_PATH, archiveRelPath), Paths.get(WORK_DIR, archiveRelPath));
-    return Paths.get(WORK_DIR, archiveRelPath);
+    Path destArchiveDir = Files.createDirectories(Paths.get(WORK_DIR, appSrcPath.getFileName().toString()));
+
+    Kubernetes.copyDirectoryFromPod(webLogicPod,
+        Paths.get(APPLICATIONS_MOUNT_PATH, archiveDistDir).toString(), destArchiveDir);
+
+    //Kubernetes.copyFileFromPod(namespace, webLogicPod.getMetadata().getName(),
+    //null, Paths.get(APPLICATIONS_MOUNT_PATH, archiveDistDir), Paths.get(WORK_DIR, archiveDistDir));
+    return destArchiveDir;
 
 
     /*
