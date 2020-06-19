@@ -68,7 +68,6 @@ import static org.apache.commons.io.FileUtils.deleteDirectory;
 import static org.awaitility.Awaitility.with;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Utility class to build application.
@@ -137,6 +136,7 @@ public class BuildApplication {
     Kubernetes.copyFileToPod(namespace, webLogicPod.getMetadata().getName(),
         null, BUILD_SCRIPT_SOURCE_PATH, Paths.get(APPLICATIONS_MOUNT_PATH,
             BUILD_SCRIPT_SOURCE_PATH.getFileName().toString()));
+
 
     Kubernetes.exec(webLogicPod, new String[]{
         "/bin/sh", "/application/" + BUILD_SCRIPT});
@@ -256,7 +256,7 @@ public class BuildApplication {
         public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
           try {
             Path targetFile = dirPath.relativize(file);
-            outputStream.putNextEntry(new ZipEntry(Paths.get(dirName, targetFile.toString()).toString()));
+            outputStream.putNextEntry(new ZipEntry(Paths.get(targetFile.toString()).toString()));
             byte[] bytes = Files.readAllBytes(file);
             outputStream.write(bytes, 0, bytes.length);
             outputStream.closeEntry();
@@ -345,14 +345,12 @@ public class BuildApplication {
 
   private static void cleanup() {
     File f = new File("/tmp/c");
-    if (!f.exists()) {
+    while (!f.exists()) {
       try {
         TimeUnit.SECONDS.sleep(10);
       } catch (InterruptedException ex) {
         Logger.getLogger(BuildApplication.class.getName()).log(Level.SEVERE, null, ex);
       }
-    } else {
-      fail("Failing test");
     }
   }
 
