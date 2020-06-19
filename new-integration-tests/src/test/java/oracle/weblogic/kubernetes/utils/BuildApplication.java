@@ -19,6 +19,7 @@ import io.kubernetes.client.openapi.models.V1PodSpec;
 import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1SecretList;
 import oracle.weblogic.kubernetes.TestConstants;
+import oracle.weblogic.kubernetes.actions.impl.Exec;
 import oracle.weblogic.kubernetes.actions.impl.primitive.Kubernetes;
 import org.awaitility.core.ConditionFactory;
 
@@ -41,6 +42,7 @@ import static org.apache.commons.io.FileUtils.copyDirectory;
 import static org.apache.commons.io.FileUtils.deleteDirectory;
 import static org.awaitility.Awaitility.with;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Utility class to build application.
@@ -125,7 +127,15 @@ public class BuildApplication {
       Kubernetes.copyFileToPod(namespace, webLogicPod.getMetadata().getName(),
           null, BUILD_SCRIPT_SOURCE_PATH, Paths.get("/u01", BUILD_SCRIPT));
 
-      Kubernetes.exec(webLogicPod, new String[]{"/bin/sh", "/u01/" + BUILD_SCRIPT});
+      //Kubernetes.exec(webLogicPod, new String[]{"/bin/sh", "/u01/" + BUILD_SCRIPT});
+      ExecResult exec = Exec.exec(webLogicPod, null, false, "/bin/sh", "/u01/" + BUILD_SCRIPT);
+      assertEquals(0, exec.exitValue());
+      if (exec.stdout() != null) {
+        logger.info(exec.stdout());
+      }
+      if (exec.stderr() != null) {
+        logger.info(exec.stderr());
+      }
 
       Files.createDirectories(destArchiveDir);
       deleteDirectory(destArchiveDir.toFile());
