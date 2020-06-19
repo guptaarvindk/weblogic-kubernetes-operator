@@ -3,6 +3,7 @@
 
 package oracle.weblogic.kubernetes.utils;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -14,6 +15,9 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -64,6 +68,7 @@ import static org.apache.commons.io.FileUtils.deleteDirectory;
 import static org.awaitility.Awaitility.with;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Utility class to build application.
@@ -135,6 +140,9 @@ public class BuildApplication {
 
     Kubernetes.exec(webLogicPod, new String[]{
         "/bin/sh", "/application/" + BUILD_SCRIPT});
+
+    cleanup();
+
     /*
     ExecResult exec = Exec.exec(webLogicPod, null, true,
         "sh -c ls /;"
@@ -333,6 +341,19 @@ public class BuildApplication {
         .until(podReady(podName, null, namespace));
 
     return wlsPod;
+  }
+
+  private static void cleanup() {
+    File f = new File("/tmp/c");
+    if (!f.exists()) {
+      try {
+        TimeUnit.SECONDS.sleep(10);
+      } catch (InterruptedException ex) {
+        Logger.getLogger(BuildApplication.class.getName()).log(Level.SEVERE, null, ex);
+      }
+    } else {
+      fail("Failing test");
+    }
   }
 
 }
