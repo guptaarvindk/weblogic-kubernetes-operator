@@ -373,7 +373,7 @@ public class JobHelper {
           && !JobWatcher.isComplete(domainIntrospectorJob)) {
         logIntrospectorFailure(packet, domainIntrospectorJob);
       }
-      packet.remove(ProcessingConstants.JOB_POD_NAME);
+      packet.remove(ProcessingConstants.JOB_POD);
 
       LOGGER.fine(getJobDeletedMessageKey(), domainUid, namespace, jobName);
     }
@@ -408,7 +408,7 @@ public class JobHelper {
       DomainPresenceInfo info = packet.getSpi(DomainPresenceInfo.class);
       String namespace = info.getNamespace();
 
-      String jobPodName = (String) packet.get(ProcessingConstants.JOB_POD_NAME);
+      String jobPodName = (String) packet.remove(ProcessingConstants.JOB_POD_NAME);
 
       return doNext(readDomainIntrospectorPodLog(jobPodName, namespace, getNext()), packet);
     }
@@ -549,14 +549,14 @@ public class JobHelper {
 
   private static void logIntrospectorFailure(Packet packet, V1Job domainIntrospectorJob) {
     Boolean logged = (Boolean) packet.get(ProcessingConstants.INTROSPECTOR_JOB_FAILURE_LOGGED);
-    String jobPodName = (String) packet.get(ProcessingConstants.JOB_POD_NAME);
+    V1Pod jobPod = (V1Pod) packet.get(ProcessingConstants.JOB_POD);
     if (logged == null || !logged.booleanValue()) {
       packet.put(ProcessingConstants.INTROSPECTOR_JOB_FAILURE_LOGGED, Boolean.valueOf(true));
       LOGGER.info(INTROSPECTOR_JOB_FAILED,
           domainIntrospectorJob.getMetadata().getName(),
           domainIntrospectorJob.getMetadata().getNamespace(),
-          domainIntrospectorJob.getStatus().toString(),
-          jobPodName);
+          jobPod.getStatus().toString(),
+          jobPod.getMetadata().getName());
       LOGGER.fine(INTROSPECTOR_JOB_FAILED_DETAIL,
           domainIntrospectorJob.getMetadata().getNamespace(),
           domainIntrospectorJob.getMetadata().getName(),
@@ -605,10 +605,9 @@ public class JobHelper {
             .map(V1PodList::getItems)
             .orElseGet(Collections::emptyList)
             .stream()
-            .map(this::getName)
-            .filter(this::isJobPodName)
+            .filter(this::isJobPod)
             .findFirst()
-            .ifPresent(name -> recordJobPodName(packet, name));
+            .ifPresent(item -> recordJobPod(packet, item));
 
       return doNext(packet);
     }
@@ -617,12 +616,13 @@ public class JobHelper {
       return Optional.of(pod).map(V1Pod::getMetadata).map(V1ObjectMeta::getName).orElse("");
     }
 
-    private boolean isJobPodName(String podName) {
-      return podName.startsWith(createJobName(domainUid));
+    private boolean isJobPod(V1Pod pod) {
+      return getName(pod).startsWith(createJobName(domainUid));
     }
 
-    private void recordJobPodName(Packet packet, String podName) {
-      packet.put(ProcessingConstants.JOB_POD_NAME, podName);
+    private void recordJobPod(Packet packet, V1Pod pod) {
+      packet.put(ProcessingConstants.JOB_POD, pod);
+      packet.put(ProcessingConstants.JOB_POD_NAME, pod.getMetadata().getName());
     }
   }
 }

@@ -17,6 +17,8 @@ import io.kubernetes.client.openapi.models.V1Container;
 import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1JobStatus;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
+import io.kubernetes.client.openapi.models.V1Pod;
+import io.kubernetes.client.openapi.models.V1PodStatus;
 import io.kubernetes.client.openapi.models.V1SecretReference;
 import oracle.kubernetes.operator.DomainProcessorTestSetup;
 import oracle.kubernetes.operator.calls.FailureStatusSourceException;
@@ -41,10 +43,11 @@ import static oracle.kubernetes.operator.DomainProcessorTestSetup.NS;
 import static oracle.kubernetes.operator.DomainProcessorTestSetup.UID;
 import static oracle.kubernetes.operator.ProcessingConstants.DOMAIN_INTROSPECTOR_JOB;
 import static oracle.kubernetes.operator.ProcessingConstants.DOMAIN_TOPOLOGY;
-import static oracle.kubernetes.operator.ProcessingConstants.JOB_POD_NAME;
+import static oracle.kubernetes.operator.ProcessingConstants.JOB_POD;
 import static oracle.kubernetes.operator.helpers.DomainStatusMatcher.hasStatus;
 import static oracle.kubernetes.operator.helpers.KubernetesTestSupport.DOMAIN;
 import static oracle.kubernetes.operator.helpers.KubernetesTestSupport.JOB;
+import static oracle.kubernetes.operator.helpers.KubernetesTestSupport.POD;
 import static oracle.kubernetes.operator.helpers.Matchers.hasEnvVar;
 import static oracle.kubernetes.operator.logging.MessageKeys.INTROSPECTOR_JOB_FAILED;
 import static oracle.kubernetes.operator.logging.MessageKeys.INTROSPECTOR_JOB_FAILED_DETAIL;
@@ -107,7 +110,6 @@ public class DomainIntrospectorJobTest {
     mementos.add(TuningParametersStub.install());
     mementos.add(testSupport.install());
     mementos.add(ScanCacheStub.install());
-    testSupport.addToPacket(JOB_POD_NAME, jobPodName);
     testSupport.addDomainPresenceInfo(domainPresenceInfo);
     testSupport.defineResources(domain);
   }
@@ -318,9 +320,13 @@ public class DomainIntrospectorJobTest {
   @Test
   public void whenJobLogContainsSevereError_logJobInfosOnDelete() {
     testSupport.defineResources(
-        new V1Job().metadata(new V1ObjectMeta().name(getJobName()).namespace(NS)).status(new V1JobStatus()));
+        new V1Job().metadata(new V1ObjectMeta().name(getJobName()).namespace(NS)).status(new V1JobStatus()),
+        new V1Pod().metadata(new V1ObjectMeta().name(getJobName() + "-pod").namespace(NS))
+            .status(new V1PodStatus().phase("Failed")));
+
     new DomainProcessorTestSetup(testSupport).defineKubernetesResources(SEVERE_MESSAGE_1);
     testSupport.addToPacket(DOMAIN_INTROSPECTOR_JOB, testSupport.getResourceWithName(JOB, getJobName()));
+    testSupport.addToPacket(JOB_POD, testSupport.getResourceWithName(POD, getJobName() + "-pod"));
 
     testSupport.runSteps(JobHelper.deleteDomainIntrospectorJobStep(terminalStep));
 
@@ -332,9 +338,13 @@ public class DomainIntrospectorJobTest {
   @Test
   public void whenJobLogContainsSevereError_logJobInfosOnReadPogLog() {
     testSupport.defineResources(
-        new V1Job().metadata(new V1ObjectMeta().name(getJobName()).namespace(NS)).status(new V1JobStatus()));
+        new V1Job().metadata(new V1ObjectMeta().name(getJobName()).namespace(NS)).status(new V1JobStatus()),
+        new V1Pod().metadata(new V1ObjectMeta().name(getJobName() + "-j6sft").namespace(NS))
+            .status(new V1PodStatus().phase("Failed")));
+
     new DomainProcessorTestSetup(testSupport).defineKubernetesResources(SEVERE_MESSAGE_1);
     testSupport.addToPacket(DOMAIN_INTROSPECTOR_JOB, testSupport.getResourceWithName(JOB, getJobName()));
+    testSupport.addToPacket(JOB_POD, testSupport.getResourceWithName(POD, getJobName() + "-j6sft"));
 
     testSupport.runSteps(JobHelper.readDomainIntrospectorPodLog(terminalStep));
 

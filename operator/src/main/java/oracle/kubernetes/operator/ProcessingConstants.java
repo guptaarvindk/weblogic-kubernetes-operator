@@ -40,4 +40,5 @@ public interface ProcessingConstants {
 
   /** Key to an object of type MakeRightDomainOperation. */
   String MAKE_RIGHT_DOMAIN_OPERATION = "makeRightOp";
+  String JOB_POD = "jobPod";
 }
