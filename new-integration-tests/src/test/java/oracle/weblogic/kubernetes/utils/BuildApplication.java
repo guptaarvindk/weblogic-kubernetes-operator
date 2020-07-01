@@ -10,7 +10,6 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.models.V1Container;
@@ -270,21 +269,32 @@ public class BuildApplication {
 
   private static void verifyDefaultTokenExists() {
     final LoggingFacade logger = getLogger();
-    for (int i = 0; i < 5; i++) {
-      V1ServiceAccountList sas = Kubernetes.listServiceAccounts("default");
-      for (V1ServiceAccount sa : sas.getItems()) {
-        if (sa.getMetadata().getName().equals("default")) {
-          List<V1ObjectReference> secrets = sa.getSecrets();
-          logger.info(dump(secrets));
-          logger.info("\n\n\n");
-        }
-      }
-      try {
-        TimeUnit.SECONDS.sleep(10);
-      } catch (InterruptedException ex) {
-        //
-      }
-    }
+
+    ConditionFactory withStandardRetryPolicy
+        = with().pollDelay(0, SECONDS)
+            .and().with().pollInterval(5, SECONDS)
+            .atMost(5, MINUTES).await();
+
+    withStandardRetryPolicy.conditionEvaluationListener(
+        condition -> logger.info("Waiting for the default token to be available in default service account, "
+            + "elapsed time {0}, remaining time {1}",
+            condition.getElapsedTimeInMS(),
+            condition.getRemainingTimeInMS()))
+        .until(() -> {
+          for (int i = 0; i < 5; i++) {
+            V1ServiceAccountList sas = Kubernetes.listServiceAccounts("default");
+            for (V1ServiceAccount sa : sas.getItems()) {
+              if (sa.getMetadata().getName().equals("default")) {
+                List<V1ObjectReference> secrets = sa.getSecrets();
+                logger.info(dump(secrets));
+                return !secrets.isEmpty();
+              }
+            }
+          }
+          return false;
+        });
   }
+
+
 
 }
