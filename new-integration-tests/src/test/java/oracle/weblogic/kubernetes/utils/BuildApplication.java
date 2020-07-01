@@ -281,14 +281,12 @@ public class BuildApplication {
             condition.getElapsedTimeInMS(),
             condition.getRemainingTimeInMS()))
         .until(() -> {
-          for (int i = 0; i < 5; i++) {
-            V1ServiceAccountList sas = Kubernetes.listServiceAccounts("default");
-            for (V1ServiceAccount sa : sas.getItems()) {
-              if (sa.getMetadata().getName().equals("default")) {
-                List<V1ObjectReference> secrets = sa.getSecrets();
-                logger.info(dump(secrets));
-                return !secrets.isEmpty();
-              }
+          V1ServiceAccountList sas = Kubernetes.listServiceAccounts("default");
+          for (V1ServiceAccount sa : sas.getItems()) {
+            if (sa.getMetadata().getName().equals("default")) {
+              List<V1ObjectReference> secrets = sa.getSecrets();
+              logger.info(dump(secrets));
+              return !secrets.isEmpty();
             }
           }
           return false;
