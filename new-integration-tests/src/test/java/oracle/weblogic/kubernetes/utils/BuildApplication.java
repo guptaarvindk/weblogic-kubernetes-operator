@@ -8,23 +8,29 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.models.V1Container;
 import io.kubernetes.client.openapi.models.V1EnvVar;
 import io.kubernetes.client.openapi.models.V1LocalObjectReference;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
+import io.kubernetes.client.openapi.models.V1ObjectReference;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodSpec;
 import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1SecretList;
+import io.kubernetes.client.openapi.models.V1ServiceAccount;
+import io.kubernetes.client.openapi.models.V1ServiceAccountList;
 import oracle.weblogic.kubernetes.TestConstants;
 import oracle.weblogic.kubernetes.actions.impl.Exec;
 import oracle.weblogic.kubernetes.actions.impl.primitive.Kubernetes;
 import oracle.weblogic.kubernetes.logging.LoggingFacade;
 import org.awaitility.core.ConditionFactory;
 
+import static io.kubernetes.client.util.Yaml.dump;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static oracle.weblogic.kubernetes.TestConstants.KIND_REPO;
@@ -194,6 +200,7 @@ public class BuildApplication {
     ConditionFactory withStandardRetryPolicy = with().pollDelay(10, SECONDS)
         .and().with().pollInterval(2, SECONDS)
         .atMost(3, MINUTES).await();
+    verifyDefaultTokenExists();
 
     final String podName = "weblogic-build-pod-" + namespace;
     V1Pod podBody = new V1Pod()
@@ -259,6 +266,25 @@ public class BuildApplication {
       isUseSecret = true;
     }
     logger.info("Using image {0}", image);
+  }
+
+  private static void verifyDefaultTokenExists() {
+    final LoggingFacade logger = getLogger();
+    for (int i = 0; i < 5; i++) {
+      V1ServiceAccountList sas = Kubernetes.listServiceAccounts("default");
+      for (V1ServiceAccount sa : sas.getItems()) {
+        if (sa.getMetadata().getName().equals("default")) {
+          List<V1ObjectReference> secrets = sa.getSecrets();
+          logger.info(dump(secrets));
+          logger.info("\n\n\n");
+        }
+      }
+      try {
+        TimeUnit.SECONDS.sleep(10);
+      } catch (InterruptedException ex) {
+        //
+      }
+    }
   }
 
 }
