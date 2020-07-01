@@ -16,6 +16,7 @@ import io.kubernetes.client.openapi.models.V1JobStatus;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
+import io.kubernetes.client.openapi.models.V1PodStatus;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
 import oracle.kubernetes.operator.DomainStatusUpdater;
@@ -369,8 +370,7 @@ public class JobHelper {
           (V1Job) packet.remove(ProcessingConstants.DOMAIN_INTROSPECTOR_JOB);
 
       packet.remove(ProcessingConstants.INTROSPECTOR_JOB_FAILURE_LOGGED);
-      if (domainIntrospectorJob != null
-          && !JobWatcher.isComplete(domainIntrospectorJob)) {
+      if (!JobWatcher.isComplete(domainIntrospectorJob)) {
         logIntrospectorFailure(packet, domainIntrospectorJob);
       }
       packet.remove(ProcessingConstants.JOB_POD);
@@ -447,8 +447,8 @@ public class JobHelper {
 
       if (isNotComplete(domainIntrospectorJob)) {
         List<String> jobConditionsReason = new ArrayList<>();
+        logIntrospectorFailure(packet, domainIntrospectorJob);
         if (domainIntrospectorJob != null) {
-          logIntrospectorFailure(packet, domainIntrospectorJob);
           V1JobStatus status = domainIntrospectorJob.getStatus();
           if (status != null && status.getConditions() != null) {
             for (V1JobCondition cond : status.getConditions()) {
@@ -552,15 +552,50 @@ public class JobHelper {
     V1Pod jobPod = (V1Pod) packet.get(ProcessingConstants.JOB_POD);
     if (logged == null || !logged.booleanValue()) {
       packet.put(ProcessingConstants.INTROSPECTOR_JOB_FAILURE_LOGGED, Boolean.valueOf(true));
-      LOGGER.info(INTROSPECTOR_JOB_FAILED,
-          domainIntrospectorJob.getMetadata().getName(),
-          domainIntrospectorJob.getMetadata().getNamespace(),
-          jobPod.getStatus().toString(),
-          jobPod.getMetadata().getName());
-      LOGGER.fine(INTROSPECTOR_JOB_FAILED_DETAIL,
-          domainIntrospectorJob.getMetadata().getNamespace(),
-          domainIntrospectorJob.getMetadata().getName(),
-          domainIntrospectorJob.toString());
+      if (domainIntrospectorJob != null || jobPod != null) {
+        String podNamespace =
+            Optional.ofNullable(jobPod)
+                .map(V1Pod::getMetadata)
+                .map(V1ObjectMeta::getNamespace)
+                .orElse(null);
+        String namespace =
+            Optional.ofNullable(domainIntrospectorJob)
+                .map(V1Job::getMetadata)
+                .map(V1ObjectMeta::getNamespace)
+                .orElse(podNamespace);
+        String jobName =
+            Optional.ofNullable(domainIntrospectorJob)
+                .map(V1Job::getMetadata)
+                .map(V1ObjectMeta::getName)
+                .orElse(null);
+        String jobPodName =
+            Optional.ofNullable(jobPod)
+                .map(V1Pod::getMetadata)
+                .map(V1ObjectMeta::getName)
+                .orElse(null);
+        String jobStatus =
+            Optional.ofNullable(domainIntrospectorJob)
+                .map(V1Job::getStatus)
+                .map(V1JobStatus::toString)
+                .orElse(null);
+        String jobPodStatus =
+            Optional.ofNullable(jobPod)
+                .map(V1Pod::getStatus)
+                .map(V1PodStatus::toString)
+                .orElse(null);
+
+        LOGGER.info(INTROSPECTOR_JOB_FAILED,
+            jobName,
+            namespace,
+            jobStatus,
+            jobPodName,
+            jobPodStatus);
+
+        LOGGER.fine(INTROSPECTOR_JOB_FAILED_DETAIL,
+            namespace,
+            Optional.ofNullable(jobPodName).orElse(jobName),
+            Optional.ofNullable(jobPodStatus).orElse(jobStatus));
+      }
     }
   }
 
