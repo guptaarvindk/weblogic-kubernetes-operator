@@ -193,13 +193,6 @@ public class JobWatcher extends Watcher<V1Job> implements WatchListener<V1Job> {
     switch (item.type) {
       case "ADDED":
       case "MODIFIED":
-        V1Job job = item.object;
-        if (!isComplete(job)) {
-          LOGGER.info(INTROSPECTOR_JOB_FAILED_DETAIL,
-              job.getMetadata().getNamespace(),
-              job.getMetadata().getName(),
-              job.getStatus().toString());
-        }
         dispatchCallback(getJobName(item), item.object);
         break;
       case "DELETED":

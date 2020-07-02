@@ -145,7 +145,7 @@ public class PodWatcher extends Watcher<V1Pod> implements WatchListener<V1Pod>, 
     switch (item.type) {
       case "ADDED":
       case "MODIFIED":
-        if (podName.contains("-introspect-domain-job") && !isComplete(pod)) {
+        if (podName.contains("-introspect-domain-job") && isFailed(pod)) {
           LOGGER.info(INTROSPECTOR_JOB_FAILED_DETAIL,
               pod.getMetadata().getNamespace(),
               pod.getMetadata().getName(),
@@ -164,11 +164,11 @@ public class PodWatcher extends Watcher<V1Pod> implements WatchListener<V1Pod>, 
   }
 
   /**
-   * Test if pod is complete.
+   * Test if pod is failed.
    * @param pod pob
-   * @return true, if complete
+   * @return true, if failed
    */
-  public static boolean isComplete(V1Pod pod) {
+  public static boolean isFailed(V1Pod pod) {
     if (pod == null) {
       return false;
     }
@@ -177,15 +177,13 @@ public class PodWatcher extends Watcher<V1Pod> implements WatchListener<V1Pod>, 
     LOGGER.fine(
         "PodWatcher.isComplete status of pod " + pod.getMetadata().getName() + ": " + status);
     if (status != null) {
-      java.util.List<V1PodCondition> conds = status.getConditions();
-      if (conds != null) {
-        for (V1PodCondition cond : conds) {
-          if ("Complete".equals(cond.getType())) {
-            if ("True".equals(cond.getStatus())) {
-              // Job is complete!
-              LOGGER.info(MessageKeys.JOB_IS_COMPLETE, pod.getMetadata().getName(), status);
-              return true;
-            }
+      java.util.List<io.kubernetes.client.openapi.models.V1ContainerStatus> conStatuses = status.getContainerStatuses();
+      if (conStatuses != null) {
+        for (io.kubernetes.client.openapi.models.V1ContainerStatus conStatus : conStatuses) {
+          if (!conStatus.getReady()
+              && conStatus.getState() != null
+              && conStatus.getState().getTerminated().getReason().contains("Error")) {
+            return true;
           }
         }
       }
