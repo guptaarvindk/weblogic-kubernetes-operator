@@ -409,6 +409,7 @@ public class ItConfigDistributionStrategy {
     overrideFiles.add(Paths.get(RESOURCE_DIR, "configfiles/configoverridesset1/version.txt"));
 
     //recreate config override map with new content
+    logger.info("Recreating configmap {0} with new override files {1}", overridecm, overrideFiles);
     createConfigMapFromFiles(overridecm, overrideFiles, domainNamespace);
 
     introspectVersion = assertDoesNotThrow(() -> getNextIntrospectVersion(domainUid, domainNamespace));
