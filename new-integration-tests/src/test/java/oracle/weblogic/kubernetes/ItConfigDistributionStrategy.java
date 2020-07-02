@@ -26,7 +26,6 @@ import io.kubernetes.client.custom.Quantity;
 import io.kubernetes.client.custom.V1Patch;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.models.V1ConfigMap;
-import io.kubernetes.client.openapi.models.V1ConfigMapList;
 import io.kubernetes.client.openapi.models.V1ConfigMapVolumeSource;
 import io.kubernetes.client.openapi.models.V1Container;
 import io.kubernetes.client.openapi.models.V1ContainerPort;
@@ -394,13 +393,9 @@ public class ItConfigDistributionStrategy {
     withStandardRetryPolicy.conditionEvaluationListener(
         condition -> logger.info("Waiting for configmap {0} to be deleted. Elapsed time{1}, remaining time {2}",
             overridecm, condition.getElapsedTimeInMS(), condition.getRemainingTimeInMS())).until(() -> {
-      V1ConfigMapList v1ConfigMapList = listConfigMaps(domainNamespace);
-      if (v1ConfigMapList.getItems().stream().noneMatch((cm) -> (cm.getMetadata().getName().equals(overridecm)))) {
-        return true;
-      } else {
-        return false;
-      }
-    });
+              return listConfigMaps(domainNamespace).getItems().stream().noneMatch((cm)
+                  -> (cm.getMetadata().getName().equals(overridecm)));
+            });
 
 
     Path srcOverrideFile = Paths.get(RESOURCE_DIR, "configfiles/configoverridesset1/config1.xml");
