@@ -206,13 +206,6 @@ public class ItConfigDistributionStrategy {
     assertNotNull(namespaces.get(1), "Namespace is null");
     domainNamespace = namespaces.get(1);
 
-
-    // build the clusterview application
-    Path distDir = buildApplication(Paths.get(APP_DIR, "clusterview"),
-        null, null, "dist", domainNamespace);
-    clusterViewAppPath = Paths.get(distDir.toString(), "clusterview.war");
-    assertTrue(clusterViewAppPath.toFile().exists(), "Application archive is not available");
-
     //start two MySQL database instances
     mysqlDBPort1 = getNextFreePort(30000, 32767);
     createMySQLDB("mysqldb-1", "root", "root123", mysqlDBPort1, domainNamespace, null);
@@ -235,6 +228,12 @@ public class ItConfigDistributionStrategy {
       // create pull secrets for WebLogic image when running in non Kind Kubernetes cluster
       createOCRRepoSecret(domainNamespace);
     }
+
+    // build the clusterview application
+    Path distDir = buildApplication(Paths.get(APP_DIR, "clusterview"),
+        null, null, "dist", domainNamespace);
+    clusterViewAppPath = Paths.get(distDir.toString(), "clusterview.war");
+    assertTrue(clusterViewAppPath.toFile().exists(), "Application archive is not available");
 
     //create and start WebLogic domain
     createDomain();
