@@ -407,7 +407,7 @@ public class JobHelper {
       DomainPresenceInfo info = packet.getSpi(DomainPresenceInfo.class);
       String namespace = info.getNamespace();
 
-      String jobPodName = (String) packet.remove(ProcessingConstants.JOB_POD_NAME);
+      String jobPodName = (String) packet.get(ProcessingConstants.JOB_POD_NAME);
 
       return doNext(readDomainIntrospectorPodLog(jobPodName, namespace, getNext()), packet);
     }
@@ -448,6 +448,7 @@ public class JobHelper {
         List<String> jobConditionsReason = new ArrayList<>();
         logIntrospectorFailure(packet, domainIntrospectorJob);
         if (domainIntrospectorJob != null) {
+          logIntrospectorFailure(packet, domainIntrospectorJob);
           V1JobStatus status = domainIntrospectorJob.getStatus();
           if (status != null && status.getConditions() != null) {
             for (V1JobCondition cond : status.getConditions()) {
