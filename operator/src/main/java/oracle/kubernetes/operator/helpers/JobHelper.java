@@ -16,7 +16,6 @@ import io.kubernetes.client.openapi.models.V1JobStatus;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
-import io.kubernetes.client.openapi.models.V1PodStatus;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;
 import oracle.kubernetes.operator.DomainStatusUpdater;
@@ -551,52 +550,65 @@ public class JobHelper {
     Boolean logged = (Boolean) packet.get(ProcessingConstants.INTROSPECTOR_JOB_FAILURE_LOGGED);
     V1Pod jobPod = (V1Pod) packet.get(ProcessingConstants.JOB_POD);
     if (logged == null || !logged.booleanValue()) {
-      packet.put(ProcessingConstants.INTROSPECTOR_JOB_FAILURE_LOGGED, Boolean.valueOf(true));
       if (domainIntrospectorJob != null || jobPod != null) {
-        String podNamespace =
-            Optional.ofNullable(jobPod)
-                .map(V1Pod::getMetadata)
-                .map(V1ObjectMeta::getNamespace)
-                .orElse(null);
-        String namespace =
-            Optional.ofNullable(domainIntrospectorJob)
-                .map(V1Job::getMetadata)
-                .map(V1ObjectMeta::getNamespace)
-                .orElse(podNamespace);
-        String jobName =
-            Optional.ofNullable(domainIntrospectorJob)
-                .map(V1Job::getMetadata)
-                .map(V1ObjectMeta::getName)
-                .orElse(null);
-        String jobPodName =
-            Optional.ofNullable(jobPod)
-                .map(V1Pod::getMetadata)
-                .map(V1ObjectMeta::getName)
-                .orElse(null);
-        String jobStatus =
-            Optional.ofNullable(domainIntrospectorJob)
-                .map(V1Job::getStatus)
-                .map(V1JobStatus::toString)
-                .orElse(null);
-        String jobPodStatus =
-            Optional.ofNullable(jobPod)
-                .map(V1Pod::getStatus)
-                .map(V1PodStatus::toString)
-                .orElse(null);
+        packet.put(ProcessingConstants.INTROSPECTOR_JOB_FAILURE_LOGGED, Boolean.valueOf(true));
+        String namespace = getNamespaceFromPodOrJob(domainIntrospectorJob, jobPod);
+        String jobName = getJobName(domainIntrospectorJob);
+        String jobPodName = getJobPodName(jobPod);
 
         LOGGER.info(INTROSPECTOR_JOB_FAILED,
-            jobName,
-            namespace,
-            jobStatus,
             jobPodName,
-            jobPodStatus);
-
+            namespace,
+            getJobPodStatus(jobPod),
+            jobName, 
+            getJobStatus(domainIntrospectorJob));
+        
         LOGGER.fine(INTROSPECTOR_JOB_FAILED_DETAIL,
             namespace,
             Optional.ofNullable(jobPodName).orElse(jobName),
-            Optional.ofNullable(jobPodStatus).orElse(jobStatus));
+            jobPod != null ? jobPod.toString() : domainIntrospectorJob.toString());
       }
     }
+  }
+
+  private static String getJobPodName(V1Pod jobPod) {
+    return Optional.ofNullable(jobPod)
+        .map(V1Pod::getMetadata)
+        .map(V1ObjectMeta::getName)
+        .orElse("");
+  }
+
+  private static String getJobName(V1Job domainIntrospectorJob) {
+    return Optional.ofNullable(domainIntrospectorJob)
+        .map(V1Job::getMetadata)
+        .map(V1ObjectMeta::getName)
+        .orElse("");
+  }
+
+  private static String getNamespaceFromPodOrJob(V1Job domainIntrospectorJob, V1Pod jobPod) {
+    String podNamespace =
+        Optional.ofNullable(jobPod)
+            .map(V1Pod::getMetadata)
+            .map(V1ObjectMeta::getNamespace)
+            .orElse("");
+    return Optional.ofNullable(domainIntrospectorJob)
+        .map(V1Job::getMetadata)
+        .map(V1ObjectMeta::getNamespace)
+        .orElse(podNamespace);
+  }
+
+  private static String getJobStatus(V1Job domainIntrospectorJob) {
+    return Optional.ofNullable(domainIntrospectorJob)
+        .map(V1Job::getStatus)
+        .map(V1JobStatus::toString)
+        .orElse("");
+  }
+
+  private static String getJobPodStatus(V1Pod jobPod) {
+    return Optional.ofNullable(jobPod)
+        .map(V1Pod::getStatus)
+        .map(io.kubernetes.client.openapi.models.V1PodStatus::toString)
+        .orElse("");
   }
 
   private static class ReadDomainIntrospectorPodStep extends Step {
@@ -642,7 +654,7 @@ public class JobHelper {
             .stream()
             .filter(this::isJobPod)
             .findFirst()
-            .ifPresent(item -> recordJobPod(packet, item));
+            .ifPresent(pod -> recordJobPod(packet, pod));
 
       return doNext(packet);
     }
