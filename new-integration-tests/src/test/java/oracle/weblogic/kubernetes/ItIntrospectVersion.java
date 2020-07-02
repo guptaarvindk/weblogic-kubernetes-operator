@@ -670,7 +670,7 @@ public class ItIntrospectVersion {
         + "{\"op\": \"add\",\"path\": \"/spec/clusters/-\", \"value\": "
         + "    {\"clusterName\" : \"" + clusterName + "\", \"replicas\": 2, \"serverStartState\": \"RUNNING\"}"
         + "},"
-        + "{\"op\": \"add\", \"path\": \"/spec/introspectVersion\", \"value\": \"" + introspectVersion + "\"}"
+        + "{\"op\": \"replace\", \"path\": \"/spec/introspectVersion\", \"value\": \"" + introspectVersion + "\"}"
         + "]";
     logger.info("Updating domain configuration using patch string: {0}\n", patchStr);
     V1Patch patch = new V1Patch(patchStr);

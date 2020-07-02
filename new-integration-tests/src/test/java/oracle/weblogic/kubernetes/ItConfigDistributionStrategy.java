@@ -68,7 +68,7 @@ import org.joda.time.DateTime;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
+//import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -338,7 +338,7 @@ public class ItConfigDistributionStrategy {
    * d. Reruns the introspector and verifies that the new configuration is applied as per the new config.xml override
    * file.
    */
-  @Disabled
+  //@Disabled
   @Order(2)
   @Test
   @DisplayName("Test new overrides are applied as per the files in recreated configmap")
@@ -363,7 +363,7 @@ public class ItConfigDistributionStrategy {
     String patchStr
         = "["
         + "{\"op\": \"add\", \"path\": \"/spec/configuration/overridesConfigMap\", \"value\": \"" + overridecm + "\"},"
-        + "{\"op\": \"add\", \"path\": \"/spec/introspectVersion\", \"value\": \"" + introspectVersion + "\"}"
+        + "{\"op\": \"replace\", \"path\": \"/spec/introspectVersion\", \"value\": \"" + introspectVersion + "\"}"
         + "]";
     logger.info("Updating domain configuration using patch string: {0}", patchStr);
     V1Patch patch = new V1Patch(patchStr);
@@ -407,7 +407,7 @@ public class ItConfigDistributionStrategy {
     logger.info("patch the domain resource with overridesConfigMap and introspectVersion");
     patchStr
         = "["
-        + "{\"op\": \"add\", \"path\": \"/spec/introspectVersion\", \"value\": \"" + introspectVersion + "\"}"
+        + "{\"op\": \"replace\", \"path\": \"/spec/introspectVersion\", \"value\": \"" + introspectVersion + "\"}"
         + "]";
     logger.info("Updating domain configuration using patch string: {0}", patchStr);
     patch = new V1Patch(patchStr);
@@ -470,7 +470,7 @@ public class ItConfigDistributionStrategy {
    * <p>Verifies after introspector runs and the server configuration and JDBC datasource configurations are
    * updated as expected.
    */
-  @Disabled
+  //@Disabled
   @Order(3)
   @Test
   @DisplayName("Test overrideDistributionStrategy value DYNAMIC")
@@ -507,7 +507,7 @@ public class ItConfigDistributionStrategy {
     patchStr
         = "["
         + "{\"op\": \"add\", \"path\": \"/spec/configuration/overridesConfigMap\", \"value\": \"" + overridecm + "\"},"
-        + "{\"op\": \"add\", \"path\": \"/spec/introspectVersion\", \"value\": \"" + introspectVersion + "\"}"
+        + "{\"op\": \"replace\", \"path\": \"/spec/introspectVersion\", \"value\": \"" + introspectVersion + "\"}"
         + "]";
     logger.info("Updating domain configuration using patch string: {0}", patchStr);
     patch = new V1Patch(patchStr);
@@ -540,7 +540,7 @@ public class ItConfigDistributionStrategy {
    * <p>Verifies after introspector runs the server configuration and JDBC datasource configurations are not
    * updated. Verifies the overrides are applied only after a domain restart.
    */
-  @Disabled
+  //@Disabled
   @Order(4)
   @Test
   @DisplayName("Test overrideDistributionStrategy value ON_RESTART")
@@ -598,7 +598,7 @@ public class ItConfigDistributionStrategy {
         = "["
         + "{\"op\": \"add\", \"path\": \"/spec/configuration/overridesConfigMap\", \"value\": \"" + overridecm + "\"},"
         + "{\"op\": \"add\", \"path\": \"/spec/configuration/secrets\", \"value\": [\"" + dsSecret + "\"]  },"
-        + "{\"op\": \"add\", \"path\": \"/spec/introspectVersion\", \"value\": \"" + introspectVersion + "\"}"
+        + "{\"op\": \"replace\", \"path\": \"/spec/introspectVersion\", \"value\": \"" + introspectVersion + "\"}"
         + "]";
     logger.info("Updating domain configuration using patch string: {0}", patchStr);
     patch = new V1Patch(patchStr);
@@ -643,7 +643,7 @@ public class ItConfigDistributionStrategy {
    *
    * <p>Test tries to set the above field to RESTART and asserts the patching fails.
    */
-  @Disabled
+  //@Disabled
   @Order(5)
   @Test
   @DisplayName("Test invalid overrideDistributionStrategy value RESTART")
