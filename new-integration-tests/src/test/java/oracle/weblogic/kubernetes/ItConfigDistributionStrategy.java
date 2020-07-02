@@ -506,7 +506,7 @@ public class ItConfigDistributionStrategy {
 
     patchStr
         = "["
-        + "{\"op\": \"remove\", \"path\": \"/spec/configuration/overrideDistributionStrategy\"},"
+        + "{\"op\": \"remove\", \"path\": \"/spec/configuration/overrideDistributionStrategy\"}"
         + "]";
     logger.info("Updating domain configuration using patch string: {0}", patchStr);
     patch = new V1Patch(patchStr);
