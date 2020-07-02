@@ -438,36 +438,6 @@ public class ItConfigDistributionStrategy {
 
     verifyResourceJDBC0Override(true);
 
-    int port = getServiceNodePort(domainNamespace, adminServerPodName + "-external", "default");
-    String baseUri = "http://" + K8S_NODEPORT_HOST + ":" + port + "/clusterview/";
-
-    //verify server attribute MaxMessageSize to be equal to 66666666
-    String adminUri = "ConfigServlet?"
-        + "attributeTest=true"
-        + "&serverType=adminserver"
-        + "&serverName=" + adminServerName;
-    HttpResponse<String> response = assertDoesNotThrow(() -> OracleHttpClient.get(baseUri + adminUri, true));
-    // check admin server override
-    assertTrue(response.body().contains("MaxMessageSize=66666666"), "Didn't get MaxMessageSize=66666666");
-
-
-    //verify ms-1 server attribute MaxMessageSize to be equal to 77777777
-    String ms1Uri = "ConfigServlet?"
-        + "attributeTest=true"
-        + "&serverType=ms"
-        + "&serverName=ms-1";
-    response = assertDoesNotThrow(() -> OracleHttpClient.get(baseUri + ms1Uri, true));
-    assertTrue(response.body().contains("MaxMessageSize=77777777"), "Didn't get MaxMessageSize=77777777");
-
-    //verify ms-2 server attribute MaxMessageSize to be equal to 88888888
-    String ms2Uri = "ConfigServlet?"
-        + "attributeTest=true"
-        + "&serverType=ms"
-        + "&serverName=ms-2";
-    response = assertDoesNotThrow(() -> OracleHttpClient.get(baseUri + ms2Uri, true));
-    assertTrue(response.body().contains("MaxMessageSize=88888888"), "Didn't get MaxMessageSize=88888888");
-
-
   }
 
   /**
