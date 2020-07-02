@@ -181,7 +181,8 @@ public class PodWatcher extends Watcher<V1Pod> implements WatchListener<V1Pod>, 
         for (io.kubernetes.client.openapi.models.V1ContainerStatus conStatus : conStatuses) {
           if (!conStatus.getReady()
               && conStatus.getState() != null
-              && conStatus.getState().getTerminated().getReason().contains("Error")) {
+              && (conStatus.getState().getWaiting() != null && conStatus.getState().getWaiting().getMessage() != null
+                  || conStatus.getState().getTerminated().getReason().contains("Error"))) {
             return true;
           }
         }
