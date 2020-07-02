@@ -61,7 +61,8 @@ public class JobWatcherTest extends WatcherTestBase implements WatchListener<V1J
   }
 
   private V1Job createJob() {
-    return new V1Job().metadata(new V1ObjectMeta().name("test").creationTimestamp(getCurrentTime()));
+    return new V1Job().metadata(new V1ObjectMeta().namespace(NS).name("test").creationTimestamp(getCurrentTime()))
+        .status(new V1JobStatus());
   }
 
   private DateTime getCurrentTime() {
@@ -90,7 +91,7 @@ public class JobWatcherTest extends WatcherTestBase implements WatchListener<V1J
   @SuppressWarnings("unchecked")
   @Override
   protected <T> T createObjectWithMetaData(V1ObjectMeta metaData) {
-    return (T) new V1Job().metadata(metaData);
+    return (T) new V1Job().metadata(metaData).status(new V1JobStatus());
   }
 
   @Override

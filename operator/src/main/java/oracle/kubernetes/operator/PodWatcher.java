@@ -17,6 +17,8 @@ import javax.annotation.Nonnull;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.kubernetes.client.openapi.models.V1Pod;
+import io.kubernetes.client.openapi.models.V1PodCondition;
+import io.kubernetes.client.openapi.models.V1PodStatus;
 import io.kubernetes.client.util.Watch;
 import oracle.kubernetes.operator.TuningParameters.WatchTuning;
 import oracle.kubernetes.operator.builders.WatchBuilder;
@@ -29,6 +31,8 @@ import oracle.kubernetes.operator.logging.LoggingFactory;
 import oracle.kubernetes.operator.logging.MessageKeys;
 import oracle.kubernetes.operator.watcher.WatchListener;
 import oracle.kubernetes.operator.work.Step;
+
+import static oracle.kubernetes.operator.logging.MessageKeys.INTROSPECTOR_JOB_FAILED_DETAIL;
 
 /**
  * Watches for changes to pods.
@@ -141,6 +145,12 @@ public class PodWatcher extends Watcher<V1Pod> implements WatchListener<V1Pod>, 
     switch (item.type) {
       case "ADDED":
       case "MODIFIED":
+        if (podName.contains("-introspect-domain-job") && !isComplete(pod)) {
+          LOGGER.info(INTROSPECTOR_JOB_FAILED_DETAIL,
+              pod.getMetadata().getNamespace(),
+              pod.getMetadata().getName(),
+              pod.getStatus().toString());
+        }
         copyOf(getOnModifiedCallbacks(podName)).forEach(c -> c.accept(pod));
         break;
       case "DELETED":
@@ -151,6 +161,36 @@ public class PodWatcher extends Watcher<V1Pod> implements WatchListener<V1Pod>, 
     }
 
     LOGGER.exiting();
+  }
+
+  /**
+   * Test if pod is complete.
+   * @param pod pob
+   * @return true, if complete
+   */
+  public static boolean isComplete(V1Pod pod) {
+    if (pod == null) {
+      return false;
+    }
+
+    V1PodStatus status = pod.getStatus();
+    LOGGER.fine(
+        "PodWatcher.isComplete status of pod " + pod.getMetadata().getName() + ": " + status);
+    if (status != null) {
+      java.util.List<V1PodCondition> conds = status.getConditions();
+      if (conds != null) {
+        for (V1PodCondition cond : conds) {
+          if ("Complete".equals(cond.getType())) {
+            if ("True".equals(cond.getStatus())) {
+              // Job is complete!
+              LOGGER.info(MessageKeys.JOB_IS_COMPLETE, pod.getMetadata().getName(), status);
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
   }
 
   // make a copy to avoid concurrent modification

@@ -32,6 +32,8 @@ import oracle.kubernetes.operator.work.Packet;
 import oracle.kubernetes.operator.work.Step;
 import oracle.kubernetes.weblogic.domain.model.Domain;
 
+import static oracle.kubernetes.operator.logging.MessageKeys.INTROSPECTOR_JOB_FAILED_DETAIL;
+
 /** Watches for Jobs to become Ready or leave Ready state. */
 public class JobWatcher extends Watcher<V1Job> implements WatchListener<V1Job> {
   private static final LoggingFacade LOGGER = LoggingFactory.getLogger("Operator", "Operator");
@@ -187,10 +189,17 @@ public class JobWatcher extends Watcher<V1Job> implements WatchListener<V1Job> {
   public void receivedResponse(Watch.Response<V1Job> item) {
     LOGGER.entering();
 
-    LOGGER.fine("JobWatcher.receivedResponse response item: " + item);
+    LOGGER.fine("JobWatcher.receivedResponse response item: type: " + item.type + " object: " + item.object);
     switch (item.type) {
       case "ADDED":
       case "MODIFIED":
+        V1Job job = item.object;
+        if (!isComplete(job)) {
+          LOGGER.info(INTROSPECTOR_JOB_FAILED_DETAIL,
+              job.getMetadata().getNamespace(),
+              job.getMetadata().getName(),
+              job.getStatus().toString());
+        }
         dispatchCallback(getJobName(item), item.object);
         break;
       case "DELETED":
