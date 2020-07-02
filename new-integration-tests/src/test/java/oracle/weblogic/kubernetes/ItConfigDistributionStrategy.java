@@ -137,8 +137,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-//import org.junit.jupiter.api.Disabled;
-
 /**
  * Tests related to overrideDistributionStrategy attribute.
  */
@@ -266,7 +264,6 @@ public class ItConfigDistributionStrategy {
     deleteConfigMap(overridecm, domainNamespace);
     String patchStr
         = "["
-        + "{\"op\": \"remove\", \"path\": \"/spec/configuration/overrideDistributionStrategy\"},"
         + "{\"op\": \"remove\", \"path\": \"/spec/configuration/overridesConfigMap\"}"
         + "]";
     logger.info("Updating domain configuration using patch string: {0}", patchStr);
@@ -340,7 +337,6 @@ public class ItConfigDistributionStrategy {
    * d. Reruns the introspector and verifies that the new configuration is applied as per the new config.xml override
    * file.
    */
-  //@Disabled
   @Order(2)
   @Test
   @DisplayName("Test new overrides are applied as per the files in recreated configmap")
@@ -450,7 +446,6 @@ public class ItConfigDistributionStrategy {
    * <p>Verifies after introspector runs and the server configuration and JDBC datasource configurations are
    * updated as expected.
    */
-  //@Disabled
   @Order(3)
   @Test
   @DisplayName("Test overrideDistributionStrategy value DYNAMIC")
@@ -508,6 +503,15 @@ public class ItConfigDistributionStrategy {
 
     verifyConfigXMLOverride(true);
     verifyResourceJDBC0Override(true);
+
+    patchStr
+        = "["
+        + "{\"op\": \"remove\", \"path\": \"/spec/configuration/overrideDistributionStrategy\"},"
+        + "]";
+    logger.info("Updating domain configuration using patch string: {0}", patchStr);
+    patch = new V1Patch(patchStr);
+    assertTrue(patchDomainCustomResource(domainUid, domainNamespace, patch, V1Patch.PATCH_FORMAT_JSON_PATCH),
+        "Failed to patch domain");
   }
 
   /**
@@ -520,7 +524,6 @@ public class ItConfigDistributionStrategy {
    * <p>Verifies after introspector runs the server configuration and JDBC datasource configurations are not
    * updated. Verifies the overrides are applied only after a domain restart.
    */
-  //@Disabled
   @Order(4)
   @Test
   @DisplayName("Test overrideDistributionStrategy value ON_RESTART")
@@ -610,11 +613,13 @@ public class ItConfigDistributionStrategy {
     deleteSecret(dsSecret, domainNamespace);
     patchStr
         = "["
+        + "{\"op\": \"remove\", \"path\": \"/spec/configuration/overrideDistributionStrategy\"},"
         + "{\"op\": \"remove\", \"path\": \"/spec/configuration/secrets\"}"
         + "]";
     logger.info("Updating domain configuration using patch string: {0}", patchStr);
     patch = new V1Patch(patchStr);
-    patchDomainCustomResource(domainUid, domainNamespace, patch, V1Patch.PATCH_FORMAT_JSON_PATCH);
+    assertTrue(patchDomainCustomResource(domainUid, domainNamespace, patch, V1Patch.PATCH_FORMAT_JSON_PATCH),
+        "Failed to patch domain");
   }
 
   /**
@@ -623,7 +628,6 @@ public class ItConfigDistributionStrategy {
    *
    * <p>Test tries to set the above field to RESTART and asserts the patching fails.
    */
-  //@Disabled
   @Order(5)
   @Test
   @DisplayName("Test invalid overrideDistributionStrategy value RESTART")
