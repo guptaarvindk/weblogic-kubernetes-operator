@@ -448,7 +448,6 @@ public class JobHelper {
         List<String> jobConditionsReason = new ArrayList<>();
         logIntrospectorFailure(packet, domainIntrospectorJob);
         if (domainIntrospectorJob != null) {
-          logIntrospectorFailure(packet, domainIntrospectorJob);
           V1JobStatus status = domainIntrospectorJob.getStatus();
           if (status != null && status.getConditions() != null) {
             for (V1JobCondition cond : status.getConditions()) {
@@ -565,8 +564,8 @@ public class JobHelper {
             getJobStatus(domainIntrospectorJob));
         
         LOGGER.fine(INTROSPECTOR_JOB_FAILED_DETAIL,
-            namespace,
             Optional.ofNullable(jobPodName).orElse(jobName),
+            namespace,
             jobPod != null ? jobPod.toString() : domainIntrospectorJob.toString());
       }
     }

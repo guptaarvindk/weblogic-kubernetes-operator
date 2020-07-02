@@ -15,6 +15,7 @@ import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 
 import io.kubernetes.client.openapi.ApiException;
+import io.kubernetes.client.openapi.models.V1ContainerStatus;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodStatus;
@@ -30,8 +31,6 @@ import oracle.kubernetes.operator.logging.LoggingFactory;
 import oracle.kubernetes.operator.logging.MessageKeys;
 import oracle.kubernetes.operator.watcher.WatchListener;
 import oracle.kubernetes.operator.work.Step;
-
-import static oracle.kubernetes.operator.logging.MessageKeys.INTROSPECTOR_JOB_FAILED_DETAIL;
 
 /**
  * Watches for changes to pods.
@@ -145,9 +144,9 @@ public class PodWatcher extends Watcher<V1Pod> implements WatchListener<V1Pod>, 
       case "ADDED":
       case "MODIFIED":
         if (podName.contains("-introspect-domain-job") && isFailed(pod)) {
-          LOGGER.info(INTROSPECTOR_JOB_FAILED_DETAIL,
-              pod.getMetadata().getNamespace(),
+          LOGGER.info(MessageKeys.INTROSPECTOR_POD_FAILED,
               pod.getMetadata().getName(),
+              pod.getMetadata().getNamespace(),
               pod.getStatus().toString());
         }
         copyOf(getOnModifiedCallbacks(podName)).forEach(c -> c.accept(pod));
@@ -174,11 +173,11 @@ public class PodWatcher extends Watcher<V1Pod> implements WatchListener<V1Pod>, 
 
     V1PodStatus status = pod.getStatus();
     LOGGER.fine(
-        "PodWatcher.isComplete status of pod " + pod.getMetadata().getName() + ": " + status);
+        "PodWatcher.isFailed status of pod " + pod.getMetadata().getName() + ": " + status);
     if (status != null) {
-      java.util.List<io.kubernetes.client.openapi.models.V1ContainerStatus> conStatuses = status.getContainerStatuses();
+      java.util.List<V1ContainerStatus> conStatuses = status.getContainerStatuses();
       if (conStatuses != null) {
-        for (io.kubernetes.client.openapi.models.V1ContainerStatus conStatus : conStatuses) {
+        for (V1ContainerStatus conStatus : conStatuses) {
           if (!conStatus.getReady()
               && conStatus.getState() != null
               && (conStatus.getState().getWaiting() != null && conStatus.getState().getWaiting().getMessage() != null
